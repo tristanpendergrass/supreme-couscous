@@ -10,13 +10,21 @@ Reason to stay and not fight boss right away: if you fear you can't beat boss or
 
 ## Food system
 
-Get food from every encounter? Ability to generate more food is a innate bonus of some party members.
+Start each zone with some food, find more randomly. It could be an option for room rewards, an alternative to money or upgrades. Ability to generate more food is a innate bonus of some party members.
 
 Default to feeding all party members. When food starts to run out, can strategically starve some units who will gain Hunger I, Hunger II etc. debuffs on their abilities/health.
 
 Get food from bosses so never enter the next zone hungry.
 
 Food is your timer for how long you can stay in a zone. But moving to the next zone with a greater food supply will mean you can stay in that higher reward zone for yet longer.
+
+## Perishable and non-perishable food
+
+This system may well not add much to the game and not be something to implement.
+
+Perishable food rots after a set amount of time, so can only be usefully stockpiled up to a certain point. Non-perishable food is much more valuable, but more expensive.
+
+Dipping into your non-perishable food should be the consequence for bad luck or poor planning, as a buffer against starvation. Actual starvation is the consequence of those things happening too many times and you run out of non-perishable food.
 
 ## Unit diversity
 
