@@ -14,6 +14,12 @@ images =
     }
 
 
+sounds =
+    { select = "rpg_sound_pack/interface/interface1.wav"
+    , attack = "rpg_sound_pack/battle/sword-unsheathe.wav"
+    }
+
+
 type alias Instance =
     Program () Model Msg
 
