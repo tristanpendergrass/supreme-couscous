@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "autoprefixer": "^9.8.6",
+    "howler": "^2.2.1",
     "postcss": "^7.0.35",
     "tailwindcss": "^2.0.1-compat"
   }

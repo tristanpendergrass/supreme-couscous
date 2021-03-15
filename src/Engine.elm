@@ -1,4 +1,4 @@
-module Engine exposing (Instance, create)
+port module Engine exposing (Instance, create)
 
 import Browser
 import Browser.Events
@@ -66,6 +66,9 @@ init _ =
 -- UPDATE
 
 
+port emitSound : String -> Cmd msg
+
+
 type Msg
     = NoOp
     | SetAllySelection (Maybe Position)
@@ -78,7 +81,7 @@ update msg model =
             ( model, Cmd.none )
 
         SetAllySelection position ->
-            ( { model | allySelection = position }, Cmd.none )
+            ( { model | allySelection = position }, emitSound sounds.select )
 
 
 
@@ -130,8 +133,7 @@ renderTop engineArgs model =
             div [ class "relative" ]
                 [ img [ class "w-24 h-24", src imageUrl, onClick selectionMsg ] []
                 , if isSelected then
-                    -- img [ class "absolute inline-block -bottom-6 ml-24 w-4 h-4", src selectionArrow ] []
-                    img [ class "absolute inline-block w-24 h-24 top-0 left-0", src battleSelection ] []
+                    img [ class "absolute inline-block w-24 h-24 top-0 left-0", src images.battleSelection ] []
 
                   else
                     div [] []
