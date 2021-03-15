@@ -8,14 +8,10 @@ import Html.Events exposing (onClick)
 import Json.Decode as Decode
 
 
-selectionArrow : String
-selectionArrow =
-    "arrow.png"
-
-
-battleSelection : String
-battleSelection =
-    "battle_selection_2.png"
+images =
+    { selectionArrow = "arrow.png"
+    , battleSelection = "battle_selection_2.png"
+    }
 
 
 type alias Instance =
