@@ -54,7 +54,7 @@ type alias EngineArgs =
 
 create : EngineArgs -> Instance
 create engineArgs =
-    Browser.element { init = init, update = update engineArgs, view = view engineArgs, subscriptions = subscriptions }
+    Browser.element { init = init, update = update engineArgs, view = view engineArgs, subscriptions = subscriptions engineArgs }
 
 
 getAllyFrom : EngineArgs -> Position -> EngineArgAlly
@@ -175,37 +175,73 @@ update engineArgs msg model =
 -- SUBSCRIPTIONS
 
 
-keyDecoder : Decode.Decoder Msg
-keyDecoder =
-    Decode.map toUserInput (Decode.field "key" Decode.string)
+keyDecoder : EngineArgs -> Model -> Decode.Decoder Msg
+keyDecoder engineArgs model =
+    Decode.map (toUserInput engineArgs model) (Decode.field "key" Decode.string)
 
 
-toUserInput : String -> Msg
-toUserInput string =
+toUserInput : EngineArgs -> Model -> String -> Msg
+toUserInput engineArgs model string =
+    case toGlobalUserInput string of
+        Nothing ->
+            case model.allySelection of
+                Nothing ->
+                    NoOp
+
+                Just { position } ->
+                    let
+                        allyStats =
+                            getAllyFrom engineArgs position
+                    in
+                    case toSelectedAllyInput allyStats.move.inputs string of
+                        Just msg ->
+                            msg
+
+                        Nothing ->
+                            NoOp
+
+        Just msg ->
+            msg
+
+
+toSelectedAllyInput : List Input -> String -> Maybe Msg
+toSelectedAllyInput inputs string =
+    let
+        inputMatchesString : String -> Input -> Bool
+        inputMatchesString iterString ( trigger, _ ) =
+            iterString == String.fromChar trigger
+    in
+    inputs
+        |> List.Extra.find (inputMatchesString string)
+        |> Maybe.map (\input -> Input input)
+
+
+toGlobalUserInput : String -> Maybe Msg
+toGlobalUserInput string =
     case string of
         "1" ->
-            SetAllySelection (Just First)
+            Just (SetAllySelection (Just First))
 
         "2" ->
-            SetAllySelection (Just Second)
+            Just (SetAllySelection (Just Second))
 
         "3" ->
-            SetAllySelection (Just Third)
+            Just (SetAllySelection (Just Third))
 
         "Escape" ->
-            SetAllySelection Nothing
+            Just (SetAllySelection Nothing)
 
         "q" ->
-            SetAllySelection Nothing
+            Just (SetAllySelection Nothing)
 
         _ ->
-            NoOp
+            Nothing
 
 
-subscriptions : Model -> Sub Msg
-subscriptions _ =
+subscriptions : EngineArgs -> Model -> Sub Msg
+subscriptions engineArgs model =
     Sub.batch
-        [ Browser.Events.onKeyUp keyDecoder ]
+        [ Browser.Events.onKeyUp (keyDecoder engineArgs model) ]
 
 
 
