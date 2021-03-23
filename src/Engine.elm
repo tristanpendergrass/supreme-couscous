@@ -6,6 +6,8 @@ import Html exposing (Html, div, img, text)
 import Html.Attributes exposing (class, src, style)
 import Html.Events exposing (onClick)
 import Json.Decode as Decode
+import List.Extra
+import Utils
 
 
 images =
@@ -24,9 +26,21 @@ type alias Instance =
     Program () Model Msg
 
 
+type alias Input =
+    ( Char, String )
+
+
+type alias EngineArgMove =
+    { damage : Int
+    , prompt : String
+    , inputs : List Input
+    }
+
+
 type alias EngineArgAlly =
     { avatarUrl : String
     , battleUrl : String
+    , move : EngineArgMove
     }
 
 
@@ -40,7 +54,20 @@ type alias EngineArgs =
 
 create : EngineArgs -> Instance
 create engineArgs =
-    Browser.element { init = init, update = update, view = view engineArgs, subscriptions = subscriptions }
+    Browser.element { init = init, update = update engineArgs, view = view engineArgs, subscriptions = subscriptions }
+
+
+getAllyFrom : EngineArgs -> Position -> EngineArgAlly
+getAllyFrom engineArgs position =
+    case position of
+        First ->
+            engineArgs.allyOne
+
+        Second ->
+            engineArgs.allyTwo
+
+        Third ->
+            engineArgs.allyThree
 
 
 
@@ -53,8 +80,34 @@ type Position
     | Third
 
 
+type alias Selection =
+    { position : Position
+    , inputs : List Input
+    }
+
+
+createSelection : Position -> Selection
+createSelection position =
+    { position = position, inputs = [] }
+
+
+addInputToSelection : Input -> Selection -> Selection
+addInputToSelection input selection =
+    { selection | inputs = input :: selection.inputs }
+
+
+isPositionSelected : Maybe Selection -> Position -> Bool
+isPositionSelected maybeSelection position =
+    case maybeSelection of
+        Nothing ->
+            False
+
+        Just selection ->
+            selection.position == position
+
+
 type alias Model =
-    { allySelection : Maybe Position }
+    { allySelection : Maybe Selection }
 
 
 init : () -> ( Model, Cmd Msg )
@@ -72,16 +125,50 @@ port emitSound : String -> Cmd msg
 type Msg
     = NoOp
     | SetAllySelection (Maybe Position)
+    | Input Input
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
+update : EngineArgs -> Msg -> Model -> ( Model, Cmd Msg )
+update engineArgs msg model =
+    let
+        noOp =
+            ( model, Cmd.none )
+    in
     case msg of
         NoOp ->
-            ( model, Cmd.none )
+            noOp
 
         SetAllySelection position ->
-            ( { model | allySelection = position }, emitSound sounds.select )
+            ( { model | allySelection = Maybe.map createSelection position }, emitSound sounds.select )
+
+        Input input ->
+            case model.allySelection of
+                Nothing ->
+                    noOp
+
+                Just selection ->
+                    let
+                        { position, inputs } =
+                            selection
+
+                        nextInput : Maybe Input
+                        nextInput =
+                            let
+                                pattern =
+                                    (getAllyFrom engineArgs position).move.inputs
+                            in
+                            Utils.getNextInput pattern (List.reverse inputs)
+
+                        inputMatches =
+                            nextInput
+                                |> Maybe.map ((==) input)
+                                |> Maybe.withDefault False
+                    in
+                    if inputMatches then
+                        ( { model | allySelection = Maybe.map (addInputToSelection input) model.allySelection }, emitSound sounds.attack )
+
+                    else
+                        noOp
 
 
 
@@ -144,18 +231,18 @@ renderTop engineArgs model =
                 [ div [ class "w-full h-1/3 flex items-center" ]
                     [ div
                         [ class "ml-4" ]
-                        [ renderAlly (model.allySelection == Just First) engineArgs.allyOne.battleUrl (SetAllySelection (Just First))
+                        [ renderAlly (isPositionSelected model.allySelection First) engineArgs.allyOne.battleUrl (SetAllySelection (Just First))
                         ]
                     ]
                 , div [ class "w-full h-1/3 flex items-center" ]
                     [ div
                         [ class "ml-32" ]
-                        [ renderAlly (model.allySelection == Just Second) engineArgs.allyTwo.battleUrl (SetAllySelection (Just Second)) ]
+                        [ renderAlly (isPositionSelected model.allySelection Second) engineArgs.allyTwo.battleUrl (SetAllySelection (Just Second)) ]
                     ]
                 , div [ class "w-full h-1/3 flex items-center" ]
                     [ div
                         [ class "ml-4" ]
-                        [ renderAlly (model.allySelection == Just Third) engineArgs.allyThree.battleUrl (SetAllySelection (Just Third))
+                        [ renderAlly (isPositionSelected model.allySelection Third) engineArgs.allyThree.battleUrl (SetAllySelection (Just Third))
                         ]
                     ]
                 ]
@@ -178,28 +265,89 @@ renderBottom engineArgs model =
     let
         avatarUrlForPosition : Position -> String
         avatarUrlForPosition position =
-            case position of
-                First ->
-                    engineArgs.allyOne.avatarUrl
+            position
+                |> getAllyFrom engineArgs
+                |> .avatarUrl
 
-                Second ->
-                    engineArgs.allyTwo.avatarUrl
+        promptForPosition : Position -> String
+        promptForPosition position =
+            position
+                |> getAllyFrom engineArgs
+                |> (.move >> .prompt)
 
-                Third ->
-                    engineArgs.allyThree.avatarUrl
+        moveForPosition : Position -> EngineArgMove
+        moveForPosition position =
+            position
+                |> getAllyFrom engineArgs
+                |> .move
 
-        renderPortrait : String -> Html Msg
-        renderPortrait url =
-            div [ class "overflow-hidden w-48 h-48 relative bg-blue-200 border-4 border-gray-900" ]
-                [ img [ src url ] [] ]
+        renderPortrait : Maybe String -> Html Msg
+        renderPortrait maybeUrl =
+            div [ class "overflow-hidden w-48 h-48 relative" ]
+                [ case maybeUrl of
+                    Just url ->
+                        div [ class "bg-blue-200 border-4 border-gray-900" ] [ img [ src url, class "bg-blue-200" ] [] ]
+
+                    Nothing ->
+                        div [] []
+                ]
+
+        renderPrompt : Maybe String -> Html Msg
+        renderPrompt maybePrompt =
+            div [ class "w-64 h-48" ]
+                [ case maybePrompt of
+                    Just prompt ->
+                        div [ class "italic" ] [ text prompt ]
+
+                    Nothing ->
+                        div [] []
+                ]
+
+        renderInput : Input -> Html Msg
+        renderInput input =
+            let
+                ( trigger, name ) =
+                    input
+            in
+            div [ class "flex items-center h-8 border-2 border-gray-900 mb-2 cursor-pointer", onClick (Input input) ]
+                [ div [ class "py-1 px-2 bg-gray-900 text-gray-100" ] [ text <| String.fromChar trigger ]
+                , div [ class "py-1 px-2" ] [ text name ]
+                ]
+
+        renderMove : Maybe EngineArgMove -> Html Msg
+        renderMove maybeMove =
+            div [ class "w-96 h-48" ]
+                [ case maybeMove of
+                    Just move ->
+                        move.inputs
+                            |> List.Extra.unique
+                            |> List.map renderInput
+                            |> div [ class "flex space-x-2 flex-wrap" ]
+
+                    Nothing ->
+                        div [] []
+                ]
+
+        renderDoneInput : Input -> Html Msg
+        renderDoneInput ( _, move ) =
+            div [] [ text move ]
+
+        renderInputs : Maybe (List Input) -> Html Msg
+        renderInputs maybeInputs =
+            div [ class "flex-grow h-48 border border-gray-900" ]
+                [ case maybeInputs of
+                    Just inputs ->
+                        div [ class "flex-col" ] (List.map renderDoneInput inputs)
+
+                    Nothing ->
+                        div [] []
+                ]
     in
-    div [ class "w-full h-full border-gray-500 border-4 bg-gray-400 flex items-center p-2" ]
-        [ case model.allySelection of
-            Nothing ->
-                div [] []
-
-            Just position ->
-                renderPortrait <| avatarUrlForPosition position
+    div [ class "w-full h-full border-gray-500 border-4 bg-gray-400 flex items-center p-2 space-x-2" ]
+        [ renderPortrait <| Maybe.map (.position >> avatarUrlForPosition) model.allySelection
+        , renderPrompt <| Maybe.map (.position >> promptForPosition) model.allySelection
+        , renderMove <| Maybe.map (.position >> moveForPosition) model.allySelection
+        , renderInputs <| Maybe.map .inputs model.allySelection
         ]
 
 

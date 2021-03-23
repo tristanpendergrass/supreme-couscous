@@ -33,3 +33,22 @@ Take inspiration from TFT. In TFT you can build "wide", having your team strengt
 Low rarity units are powerful because you can easily make a three star unit of them. Rare units are inherently more powerful in their abilities and stats, level for level.
 
 We might want to whole sale steal the traits system.
+
+## Move Accuracy
+
+There should be a grade or percent correct score for the move. When complete it will have a fraction of its affect accordingly, whether damage or utility.
+
+Hitting the parts of the move in the wrong order will lower the accuracy, naturally, so more complicated moves run the risk of not working as well as the simpler ones.
+
+Some enemies will have an attack that adds an errant "mistake" into the move set if they go off while the move is being executed. The strategy thus becomes to avoid doing your
+high impact moves when the enemy is about to interfere.
+
+Some ally buffs could protect against this, or improve the accuracy above 100% for extra effect.
+
+## How players express mastery
+
+There are two primary axis along which the player can perform better or worse:
+
+1. How quickly and reliably the player dispatches commands to their team. This is largely a matter of muscle memory, although there will be large gulfs in player aptitude, even after playing for a long time. Players that have low skill in this dimension should generally be facing a fun but manageable challenge with a team of all simple characters plus one complex one. Players of intermediate skill should well handle teams with more complex characters, and masters of this axis should almost but not quite be able to get the full potential from a team of complex characters.
+
+2. Metagame strategy. Choosing the right upgrades and team composition. Decisions about team comp look a lot like they do in TFT.

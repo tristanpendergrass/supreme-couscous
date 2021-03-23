@@ -5,7 +5,7 @@ const app = Elm.Main.init({
   node: document.querySelector("main")
 });
 
-// Howler.volume(0.5);
+Howler.volume(0.1);
 
 app.ports.emitSound.subscribe((filename) => {
   const sound = new Howl({
