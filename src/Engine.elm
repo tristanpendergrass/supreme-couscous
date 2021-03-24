@@ -180,28 +180,42 @@ keyDecoder engineArgs model =
     Decode.map (toUserInput engineArgs model) (Decode.field "key" Decode.string)
 
 
+tryAll : List (Maybe t) -> Maybe t
+tryAll things =
+    case things of
+        [] ->
+            Nothing
+
+        first :: rest ->
+            case first of
+                Just _ ->
+                    first
+
+                Nothing ->
+                    tryAll rest
+
+
 toUserInput : EngineArgs -> Model -> String -> Msg
 toUserInput engineArgs model string =
-    case toGlobalUserInput string of
-        Nothing ->
-            case model.allySelection of
-                Nothing ->
-                    NoOp
+    let
+        selectionInput =
+            model.allySelection
+                |> Maybe.andThen
+                    (\{ position } ->
+                        let
+                            ally =
+                                getAllyFrom engineArgs position
+                        in
+                        toSelectedAllyInput ally.move.inputs string
+                    )
 
-                Just { position } ->
-                    let
-                        allyStats =
-                            getAllyFrom engineArgs position
-                    in
-                    case toSelectedAllyInput allyStats.move.inputs string of
-                        Just msg ->
-                            msg
-
-                        Nothing ->
-                            NoOp
-
-        Just msg ->
-            msg
+        result =
+            tryAll
+                [ toGlobalUserInput string
+                , selectionInput
+                ]
+    in
+    Maybe.withDefault NoOp result
 
 
 toSelectedAllyInput : List Input -> String -> Maybe Msg
@@ -213,7 +227,7 @@ toSelectedAllyInput inputs string =
     in
     inputs
         |> List.Extra.find (inputMatchesString string)
-        |> Maybe.map (\input -> Input input)
+        |> Maybe.map Input
 
 
 toGlobalUserInput : String -> Maybe Msg
