@@ -1,4 +1,4 @@
-module Utils exposing (getNextInput)
+module Utils exposing (getNextInput, isPatternComplete)
 
 -- iterate over pattern, keeping a pointer to liveInputs as well.
 -- To move forward in pattern you must find the matching input in liveInputs, moving strictly forward.
@@ -21,3 +21,20 @@ getNextInput pattern liveInputs =
 
             else
                 getNextInput pattern restLive
+
+
+isPatternComplete : List a -> List a -> Bool
+isPatternComplete pattern liveInputs =
+    case ( pattern, liveInputs ) of
+        ( [], _ ) ->
+            True
+
+        ( _, [] ) ->
+            False
+
+        ( nextPattern :: restPattern, nextLive :: restLive ) ->
+            if nextPattern == nextLive then
+                isPatternComplete restPattern restLive
+
+            else
+                isPatternComplete pattern restLive

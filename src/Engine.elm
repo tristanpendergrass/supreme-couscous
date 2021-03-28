@@ -2,7 +2,7 @@ port module Engine exposing (Instance, create)
 
 import Browser
 import Browser.Events
-import Html exposing (Html, div, img, text)
+import Html exposing (Html, button, div, img, text)
 import Html.Attributes exposing (class, src, style)
 import Html.Events exposing (onClick)
 import Json.Decode as Decode
@@ -126,6 +126,7 @@ type Msg
     = NoOp
     | SetAllySelection (Maybe Position)
     | Input Input
+    | Finish
 
 
 update : EngineArgs -> Msg -> Model -> ( Model, Cmd Msg )
@@ -169,6 +170,29 @@ update engineArgs msg model =
 
                     else
                         noOp
+
+        Finish ->
+            case model.allySelection of
+                Nothing ->
+                    noOp
+
+                Just selection ->
+                    let
+                        {position, inputs} = selection
+
+                        isPatternComplete = 
+                            let
+                                pattern = (getAllyFrom engineArgs position).move.inputs
+                            in
+                            Utils.isPatternComplete pattern (List.reverse inputs)
+                    in
+                    if isPatternComplete then
+                        ({ model | allySelection = Nothing}, Cmd.none)
+
+                    else
+                        ({ model | allySelection = Nothing}, Cmd.none)
+
+
 
 
 
@@ -364,15 +388,24 @@ renderBottom engineArgs model =
                 , div [ class "py-1 px-2" ] [ text name ]
                 ]
 
+        renderFinish : EngineArgMove -> Html Msg
+        renderFinish move =
+            button [ onClick Finish ] [ text "Finish" ]
+
         renderMove : Maybe EngineArgMove -> Html Msg
         renderMove maybeMove =
-            div [ class "w-96 h-48" ]
+            div [ class "w-96 h-48 " ]
                 [ case maybeMove of
                     Just move ->
-                        move.inputs
-                            |> List.Extra.unique
-                            |> List.map renderInput
-                            |> div [ class "flex space-x-2 flex-wrap" ]
+                        div [ class "h-full w-full flex-col" ]
+                            [ div [ class "w-96 h-40" ]
+                                [ move.inputs
+                                    |> List.Extra.unique
+                                    |> List.map renderInput
+                                    |> div [ class "flex space-x-2 flex-wrap" ]
+                                ]
+                            , div [ class "w-96 h-8" ] [ renderFinish move ]
+                            ]
 
                     Nothing ->
                         div [] []
