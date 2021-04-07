@@ -1,4 +1,4 @@
-port module Engine exposing (Instance, create)
+port module Engine exposing (EngineArgAlly, EngineArgMove, Instance, create)
 
 import Browser
 import Browser.Events
@@ -7,6 +7,7 @@ import Html.Attributes exposing (class, src, style)
 import Html.Events exposing (onClick)
 import Json.Decode as Decode
 import List.Extra
+import SelectionList exposing (SelectionList)
 import Utils
 
 
@@ -46,28 +47,13 @@ type alias EngineArgAlly =
 
 type alias EngineArgs =
     { title : String
-    , allyOne : EngineArgAlly
-    , allyTwo : EngineArgAlly
-    , allyThree : EngineArgAlly
+    , initialParty : List EngineArgAlly
     }
 
 
 create : EngineArgs -> Instance
 create engineArgs =
-    Browser.element { init = init, update = update engineArgs, view = view engineArgs, subscriptions = subscriptions engineArgs }
-
-
-getAllyFrom : EngineArgs -> Position -> EngineArgAlly
-getAllyFrom engineArgs position =
-    case position of
-        First ->
-            engineArgs.allyOne
-
-        Second ->
-            engineArgs.allyTwo
-
-        Third ->
-            engineArgs.allyThree
+    Browser.element { init = init engineArgs, update = update engineArgs, view = view engineArgs, subscriptions = subscriptions engineArgs }
 
 
 
@@ -81,38 +67,37 @@ type Position
 
 
 type alias Selection =
-    { position : Position
-    , inputs : List Input
+    { liveInputs : List Input
     }
-
-
-createSelection : Position -> Selection
-createSelection position =
-    { position = position, inputs = [] }
 
 
 addInputToSelection : Input -> Selection -> Selection
 addInputToSelection input selection =
-    { selection | inputs = input :: selection.inputs }
+    { selection | liveInputs = input :: selection.liveInputs }
 
 
-isPositionSelected : Maybe Selection -> Position -> Bool
-isPositionSelected maybeSelection position =
-    case maybeSelection of
-        Nothing ->
-            False
+type alias GameAlly =
+    { stats : EngineArgAlly }
 
-        Just selection ->
-            selection.position == position
+
+type alias Party =
+    SelectionList GameAlly Selection
 
 
 type alias Model =
-    { allySelection : Maybe Selection }
+    { party : Party
+    }
 
 
-init : () -> ( Model, Cmd Msg )
-init _ =
-    ( { allySelection = Nothing }, Cmd.none )
+init : EngineArgs -> () -> ( Model, Cmd Msg )
+init engineArgs _ =
+    let
+        initialSelectionList =
+            engineArgs.initialParty
+                |> List.map GameAlly
+                |> SelectionList.create
+    in
+    ( { party = initialSelectionList }, Cmd.none )
 
 
 
@@ -124,9 +109,14 @@ port emitSound : String -> Cmd msg
 
 type Msg
     = NoOp
-    | SetAllySelection (Maybe Position)
+    | SelectAlly (Maybe Int)
     | Input Input
     | Finish
+
+
+updateParty : (Party -> Party) -> Model -> Model
+updateParty updateFn model =
+    { model | party = updateFn model.party }
 
 
 update : EngineArgs -> Msg -> Model -> ( Model, Cmd Msg )
@@ -139,10 +129,63 @@ update engineArgs msg model =
         NoOp ->
             noOp
 
-        SetAllySelection position ->
-            ( { model | allySelection = Maybe.map createSelection position }, emitSound sounds.select )
+        SelectAlly maybePosition ->
+            case maybePosition of
+                Nothing ->
+                    -- Deselection
+                    let
+                        newModel =
+                            model
+                                |> updateParty SelectionList.clearSelection
+                    in
+                    ( newModel, Cmd.none )
+
+                Just position ->
+                    -- Selection of ally
+                    let
+                        updatePosition : Party -> Party
+                        updatePosition party =
+                            SelectionList.select position { liveInputs = [] } party
+                                |> Result.withDefault party
+
+                        newModel =
+                            model
+                                |> updateParty updatePosition
+                    in
+                    ( newModel, emitSound sounds.select )
 
         Input input ->
+            let
+                updateInputs : ( GameAlly, Selection ) -> Selection
+                updateInputs ( selectedAlly, selection ) =
+                    let
+                        nextInput : Maybe Input
+                        nextInput =
+                            let
+                                pattern =
+                                    selectedAlly.stats.move.inputs
+                            in
+                            Utils.getNextInput pattern (List.reverse selection.liveInputs)
+
+                        inputMatches =
+                            nextInput
+                                |> Maybe.map ((==) input)
+                                |> Maybe.withDefault False
+                    in
+                    if inputMatches then
+                        addInputToSelection input selection
+
+                    else
+                        selection
+            in
+            case SelectionList.mapSelectionData updateInputs model.party of
+                Err _ ->
+                    noOp
+
+                Ok newParty ->
+                    ( { model | party = newParty }, emitSound sounds.attack )
+
+        Finish ->
             case model.allySelection of
                 Nothing ->
                     noOp
@@ -152,47 +195,18 @@ update engineArgs msg model =
                         { position, inputs } =
                             selection
 
-                        nextInput : Maybe Input
-                        nextInput =
+                        isPatternComplete =
                             let
                                 pattern =
                                     (getAllyFrom engineArgs position).move.inputs
                             in
-                            Utils.getNextInput pattern (List.reverse inputs)
-
-                        inputMatches =
-                            nextInput
-                                |> Maybe.map ((==) input)
-                                |> Maybe.withDefault False
-                    in
-                    if inputMatches then
-                        ( { model | allySelection = Maybe.map (addInputToSelection input) model.allySelection }, emitSound sounds.attack )
-
-                    else
-                        noOp
-
-        Finish ->
-            case model.allySelection of
-                Nothing ->
-                    noOp
-
-                Just selection ->
-                    let
-                        {position, inputs} = selection
-
-                        isPatternComplete = 
-                            let
-                                pattern = (getAllyFrom engineArgs position).move.inputs
-                            in
                             Utils.isPatternComplete pattern (List.reverse inputs)
                     in
                     if isPatternComplete then
-                        ({ model | allySelection = Nothing}, Cmd.none)
+                        ( { model | allySelection = Nothing }, Cmd.none )
 
                     else
-                        ({ model | allySelection = Nothing}, Cmd.none)
-
-
+                        ( { model | allySelection = Nothing }, Cmd.none )
 
 
 
@@ -258,19 +272,19 @@ toGlobalUserInput : String -> Maybe Msg
 toGlobalUserInput string =
     case string of
         "1" ->
-            Just (SetAllySelection (Just First))
+            Just (SelectAlly (Just First))
 
         "2" ->
-            Just (SetAllySelection (Just Second))
+            Just (SelectAlly (Just Second))
 
         "3" ->
-            Just (SetAllySelection (Just Third))
+            Just (SelectAlly (Just Third))
 
         "Escape" ->
-            Just (SetAllySelection Nothing)
+            Just (SelectAlly Nothing)
 
         "q" ->
-            Just (SetAllySelection Nothing)
+            Just (SelectAlly Nothing)
 
         _ ->
             Nothing
@@ -305,18 +319,18 @@ renderTop engineArgs model =
                 [ div [ class "w-full h-1/3 flex items-center" ]
                     [ div
                         [ class "ml-4" ]
-                        [ renderAlly (isPositionSelected model.allySelection First) engineArgs.allyOne.battleUrl (SetAllySelection (Just First))
+                        [ renderAlly (isPositionSelected model.allySelection First) engineArgs.allyOne.battleUrl (SelectAlly (Just First))
                         ]
                     ]
                 , div [ class "w-full h-1/3 flex items-center" ]
                     [ div
                         [ class "ml-32" ]
-                        [ renderAlly (isPositionSelected model.allySelection Second) engineArgs.allyTwo.battleUrl (SetAllySelection (Just Second)) ]
+                        [ renderAlly (isPositionSelected model.allySelection Second) engineArgs.allyTwo.battleUrl (SelectAlly (Just Second)) ]
                     ]
                 , div [ class "w-full h-1/3 flex items-center" ]
                     [ div
                         [ class "ml-4" ]
-                        [ renderAlly (isPositionSelected model.allySelection Third) engineArgs.allyThree.battleUrl (SetAllySelection (Just Third))
+                        [ renderAlly (isPositionSelected model.allySelection Third) engineArgs.allyThree.battleUrl (SelectAlly (Just Third))
                         ]
                     ]
                 ]

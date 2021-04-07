@@ -3,46 +3,57 @@ module Main exposing (main)
 import Engine
 
 
+allyOne : Engine.EngineArgAlly
+allyOne =
+    { avatarUrl = "thief_portrait.png"
+    , battleUrl = "thief.png"
+    , move =
+        { damage = 5
+        , prompt = "A quick jab, followed by a slash..."
+        , inputs =
+            [ ( 'j', "Jab" )
+            , ( 's', "Slash" )
+            ]
+        }
+    }
+
+
+allyTwo : Engine.EngineArgAlly
+allyTwo =
+    { avatarUrl = "knight_portrait.png"
+    , battleUrl = "knight.png"
+    , move =
+        { damage = 10
+        , prompt = "Analyze the opponent's weak spots and then strike twice..."
+        , inputs =
+            [ ( 'a', "Analyze" )
+            , ( 's', "Strike" )
+            , ( 's', "Strike" )
+            ]
+        }
+    }
+
+
+allyThree : Engine.EngineArgAlly
+allyThree =
+    { avatarUrl = "priest_portrait.png"
+    , battleUrl = "priest.png"
+    , move =
+        { damage = 2
+        , prompt = "Focus, determination, and then yell 'hoody hoo!'..."
+        , inputs =
+            [ ( 'f', "Focus" )
+            , ( 'd', "Determination" )
+            , ( 'h', "Hoody Hoo!" )
+            ]
+        }
+    }
+
+
 main : Engine.Instance
 main =
     Engine.create
         { title = "A Bun Worth Fighting For"
-        , allyOne =
-            { avatarUrl = "thief_portrait.png"
-            , battleUrl = "thief.png"
-            , move =
-                { damage = 5
-                , prompt = "A quick jab, followed by a slash..."
-                , inputs =
-                    [ ( 'j', "Jab" )
-                    , ( 's', "Slash" )
-                    ]
-                }
-            }
-        , allyTwo =
-            { avatarUrl = "knight_portrait.png"
-            , battleUrl = "knight.png"
-            , move =
-                { damage = 10
-                , prompt = "Analyze the opponent's weak spots and then strike twice..."
-                , inputs =
-                    [ ( 'a', "Analyze" )
-                    , ( 's', "Strike" )
-                    , ( 's', "Strike" )
-                    ]
-                }
-            }
-        , allyThree =
-            { avatarUrl = "priest_portrait.png"
-            , battleUrl = "priest.png"
-            , move =
-                { damage = 2
-                , prompt = "Focus, determination, and then yell 'hoody hoo!'..."
-                , inputs =
-                    [ ( 'f', "Focus" )
-                    , ( 'd', "Determination" )
-                    , ( 'h', "Hoody Hoo!" )
-                    ]
-                }
-            }
+        , initialParty =
+            [ allyOne, allyTwo, allyThree ]
         }
