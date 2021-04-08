@@ -3,6 +3,7 @@ module SelectionList exposing
     , clearSelection
     , create
     , getSelected
+    , mapItems
     , mapSelectionData
     , select
     , toList
@@ -68,3 +69,17 @@ mapSelectionData mapFn (SelectionList first maybeEl second) =
                     Just ( el, mapFn ( el, data ) )
             in
             Ok <| SelectionList first newEl second
+
+
+mapItems : (Bool -> a -> b) -> SelectionList a t -> List b
+mapItems mapFn (SelectionList first maybeEl second) =
+    List.concat
+        [ List.map (mapFn False) first
+        , case maybeEl of
+            Just ( el, _ ) ->
+                [ mapFn True el ]
+
+            Nothing ->
+                []
+        , List.map (mapFn False) second
+        ]

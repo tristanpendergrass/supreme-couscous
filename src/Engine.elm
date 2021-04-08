@@ -60,11 +60,6 @@ create engineArgs =
 -- MODEL
 
 
-type Position
-    = First
-    | Second
-    | Third
-
 
 type alias Selection =
     { liveInputs : List Input
@@ -186,27 +181,23 @@ update engineArgs msg model =
                     ( { model | party = newParty }, emitSound sounds.attack )
 
         Finish ->
-            case model.allySelection of
-                Nothing ->
-                    noOp
+            let
+                isPatternComplete =
+                    case SelectionList.getSelected model.party of
+                        Just (selectedAlly, {liveInputs} ->
+                            Utils.isPatternComplete selectedAlly.stats.move.inputs (List.reverse liveInputs)
 
-                Just selection ->
-                    let
-                        { position, inputs } =
-                            selection
+                        Nothing ->
+                            False
 
-                        isPatternComplete =
-                            let
-                                pattern =
-                                    (getAllyFrom engineArgs position).move.inputs
-                            in
-                            Utils.isPatternComplete pattern (List.reverse inputs)
-                    in
-                    if isPatternComplete then
-                        ( { model | allySelection = Nothing }, Cmd.none )
-
-                    else
-                        ( { model | allySelection = Nothing }, Cmd.none )
+                newModel =
+                    model
+                        |> updateParty SelectionList.clearSelection
+            in
+            if isPatternComplete then
+                (newModel, emitSound sounds.attack)
+            else
+                (newModel, emitSound sounds.select)
 
 
 
@@ -237,14 +228,10 @@ toUserInput : EngineArgs -> Model -> String -> Msg
 toUserInput engineArgs model string =
     let
         selectionInput =
-            model.allySelection
+            SelectionList.getSelected model.party
                 |> Maybe.andThen
-                    (\{ position } ->
-                        let
-                            ally =
-                                getAllyFrom engineArgs position
-                        in
-                        toSelectedAllyInput ally.move.inputs string
+                    (\(selectedAlly, _)  ->
+                        toSelectedAllyInput selectedAlly.stats.move.inputs string
                     )
 
         result =
@@ -272,13 +259,13 @@ toGlobalUserInput : String -> Maybe Msg
 toGlobalUserInput string =
     case string of
         "1" ->
-            Just (SelectAlly (Just First))
+            Just (SelectAlly (Just 0))
 
         "2" ->
-            Just (SelectAlly (Just Second))
+            Just (SelectAlly (Just 1))
 
         "3" ->
-            Just (SelectAlly (Just Third))
+            Just (SelectAlly (Just 2))
 
         "Escape" ->
             Just (SelectAlly Nothing)
@@ -316,24 +303,17 @@ renderTop engineArgs model =
 
         renderAllies =
             div [ class "border border-dashed h-full w-96 flex-col" ]
-                [ div [ class "w-full h-1/3 flex items-center" ]
-                    [ div
-                        [ class "ml-4" ]
-                        [ renderAlly (isPositionSelected model.allySelection First) engineArgs.allyOne.battleUrl (SelectAlly (Just First))
-                        ]
-                    ]
-                , div [ class "w-full h-1/3 flex items-center" ]
-                    [ div
-                        [ class "ml-32" ]
-                        [ renderAlly (isPositionSelected model.allySelection Second) engineArgs.allyTwo.battleUrl (SelectAlly (Just Second)) ]
-                    ]
-                , div [ class "w-full h-1/3 flex items-center" ]
-                    [ div
-                        [ class "ml-4" ]
-                        [ renderAlly (isPositionSelected model.allySelection Third) engineArgs.allyThree.battleUrl (SelectAlly (Just Third))
-                        ]
-                    ]
-                ]
+                (SelectionList.mapItems 
+                    (\isSelected ally -> (
+                        div [ class "w-full h-1/3 flex items-center" ]
+                            [ div
+                                [ class "ml-4" ]
+                                [ renderAlly (isSelected) ally.stats.battleUrl (SelectAlly (Just 0))
+                                ]
+                            ]
+                    ))
+                    model.party
+                )
 
         renderEnemy =
             div [ class "border border-dashed border-red-500 h-full w-96" ]
@@ -351,41 +331,24 @@ renderTop engineArgs model =
 renderBottom : EngineArgs -> Model -> Html Msg
 renderBottom engineArgs model =
     let
-        avatarUrlForPosition : Position -> String
-        avatarUrlForPosition position =
-            position
-                |> getAllyFrom engineArgs
-                |> .avatarUrl
 
-        promptForPosition : Position -> String
-        promptForPosition position =
-            position
-                |> getAllyFrom engineArgs
-                |> (.move >> .prompt)
-
-        moveForPosition : Position -> EngineArgMove
-        moveForPosition position =
-            position
-                |> getAllyFrom engineArgs
-                |> .move
-
-        renderPortrait : Maybe String -> Html Msg
-        renderPortrait maybeUrl =
+        renderPortrait : Party -> Html Msg
+        renderPortrait party =
             div [ class "overflow-hidden w-48 h-48 relative" ]
-                [ case maybeUrl of
-                    Just url ->
-                        div [ class "bg-blue-200 border-4 border-gray-900" ] [ img [ src url, class "bg-blue-200" ] [] ]
+                [ case SelectionList.getSelected party of
+                    Just (selectedAlly, _) ->
+                        div [ class "bg-blue-200 border-4 border-gray-900" ] [ img [ src selectedAlly.stats.avatarUrl, class "bg-blue-200" ] [] ]
 
                     Nothing ->
                         div [] []
                 ]
 
-        renderPrompt : Maybe String -> Html Msg
-        renderPrompt maybePrompt =
+        renderPrompt : Party -> Html Msg
+        renderPrompt party =
             div [ class "w-64 h-48" ]
-                [ case maybePrompt of
-                    Just prompt ->
-                        div [ class "italic" ] [ text prompt ]
+                [ case SelectionList.getSelected party of
+                    Just (selectedAlly, _) ->
+                        div [ class "italic" ] [ text selectedAlly.stats.move.prompt ]
 
                     Nothing ->
                         div [] []
@@ -403,48 +366,49 @@ renderBottom engineArgs model =
                 ]
 
         renderFinish : EngineArgMove -> Html Msg
-        renderFinish move =
+        renderFinish _ =
             button [ onClick Finish ] [ text "Finish" ]
 
-        renderMove : Maybe EngineArgMove -> Html Msg
-        renderMove maybeMove =
+
+        renderMove : Party -> Html Msg
+        renderMove party =
             div [ class "w-96 h-48 " ]
-                [ case maybeMove of
-                    Just move ->
+                [ case SelectionList.getSelected party of
+                    Just (selectedAlly, _) ->
                         div [ class "h-full w-full flex-col" ]
                             [ div [ class "w-96 h-40" ]
-                                [ move.inputs
+                                [ selectedAlly.stats.move.inputs
                                     |> List.Extra.unique
                                     |> List.map renderInput
                                     |> div [ class "flex space-x-2 flex-wrap" ]
                                 ]
-                            , div [ class "w-96 h-8" ] [ renderFinish move ]
+                            , div [ class "w-96 h-8" ] [ renderFinish selectedAlly.stats.move ]
                             ]
 
                     Nothing ->
                         div [] []
                 ]
 
-        renderDoneInput : Input -> Html Msg
-        renderDoneInput ( _, move ) =
+        renderLiveInput : Input -> Html Msg
+        renderLiveInput ( _, move ) =
             div [] [ text move ]
 
-        renderInputs : Maybe (List Input) -> Html Msg
-        renderInputs maybeInputs =
+        renderInputs : Party -> Html Msg
+        renderInputs party =
             div [ class "flex-grow h-48 border border-gray-900" ]
-                [ case maybeInputs of
-                    Just inputs ->
-                        div [ class "flex-col" ] (List.map renderDoneInput inputs)
+                [ case SelectionList.getSelected party of
+                    Just (_, {liveInputs}) ->
+                        div [ class "flex-col" ] (List.map renderLiveInput liveInputs)
 
                     Nothing ->
                         div [] []
                 ]
     in
     div [ class "w-full h-full border-gray-500 border-4 bg-gray-400 flex items-center p-2 space-x-2" ]
-        [ renderPortrait <| Maybe.map (.position >> avatarUrlForPosition) model.allySelection
-        , renderPrompt <| Maybe.map (.position >> promptForPosition) model.allySelection
-        , renderMove <| Maybe.map (.position >> moveForPosition) model.allySelection
-        , renderInputs <| Maybe.map .inputs model.allySelection
+        [ renderPortrait <| model.party
+        , renderPrompt <| model.party
+        , renderMove <|  model.party
+        , renderInputs <| model.party
         ]
 
 
