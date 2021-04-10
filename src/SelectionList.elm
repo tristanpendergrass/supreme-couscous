@@ -50,11 +50,13 @@ select position data oldList =
             toList oldList
     in
     case List.Extra.getAt position list of
+        -- equivalent to myArr[3]
         Nothing ->
+            -- out of range
             Result.Err <| "Can't select position " ++ String.fromInt position
 
         Just selected ->
-            Result.Ok (SelectionList (List.take position list) (Just ( selected, data )) (List.drop position list))
+            Result.Ok (SelectionList (List.take position list) (Just ( selected, data )) (List.drop (position + 1) list))
 
 
 mapSelectionData : (( a, t ) -> t) -> SelectionList a t -> Result String (SelectionList a t)

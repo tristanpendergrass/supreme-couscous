@@ -60,7 +60,6 @@ create engineArgs =
 -- MODEL
 
 
-
 type alias Selection =
     { liveInputs : List Input
     }
@@ -184,7 +183,7 @@ update engineArgs msg model =
             let
                 isPatternComplete =
                     case SelectionList.getSelected model.party of
-                        Just (selectedAlly, {liveInputs} ->
+                        Just ( selectedAlly, { liveInputs } ) ->
                             Utils.isPatternComplete selectedAlly.stats.move.inputs (List.reverse liveInputs)
 
                         Nothing ->
@@ -195,9 +194,10 @@ update engineArgs msg model =
                         |> updateParty SelectionList.clearSelection
             in
             if isPatternComplete then
-                (newModel, emitSound sounds.attack)
+                ( newModel, emitSound sounds.attack )
+
             else
-                (newModel, emitSound sounds.select)
+                ( newModel, emitSound sounds.select )
 
 
 
@@ -230,7 +230,7 @@ toUserInput engineArgs model string =
         selectionInput =
             SelectionList.getSelected model.party
                 |> Maybe.andThen
-                    (\(selectedAlly, _)  ->
+                    (\( selectedAlly, _ ) ->
                         toSelectedAllyInput selectedAlly.stats.move.inputs string
                     )
 
@@ -303,15 +303,15 @@ renderTop engineArgs model =
 
         renderAllies =
             div [ class "border border-dashed h-full w-96 flex-col" ]
-                (SelectionList.mapItems 
-                    (\isSelected ally -> (
+                (SelectionList.mapItems
+                    (\isSelected ally ->
                         div [ class "w-full h-1/3 flex items-center" ]
                             [ div
                                 [ class "ml-4" ]
-                                [ renderAlly (isSelected) ally.stats.battleUrl (SelectAlly (Just 0))
+                                [ renderAlly isSelected ally.stats.battleUrl (SelectAlly (Just 0))
                                 ]
                             ]
-                    ))
+                    )
                     model.party
                 )
 
@@ -331,12 +331,11 @@ renderTop engineArgs model =
 renderBottom : EngineArgs -> Model -> Html Msg
 renderBottom engineArgs model =
     let
-
         renderPortrait : Party -> Html Msg
         renderPortrait party =
             div [ class "overflow-hidden w-48 h-48 relative" ]
                 [ case SelectionList.getSelected party of
-                    Just (selectedAlly, _) ->
+                    Just ( selectedAlly, _ ) ->
                         div [ class "bg-blue-200 border-4 border-gray-900" ] [ img [ src selectedAlly.stats.avatarUrl, class "bg-blue-200" ] [] ]
 
                     Nothing ->
@@ -347,7 +346,7 @@ renderBottom engineArgs model =
         renderPrompt party =
             div [ class "w-64 h-48" ]
                 [ case SelectionList.getSelected party of
-                    Just (selectedAlly, _) ->
+                    Just ( selectedAlly, _ ) ->
                         div [ class "italic" ] [ text selectedAlly.stats.move.prompt ]
 
                     Nothing ->
@@ -369,12 +368,11 @@ renderBottom engineArgs model =
         renderFinish _ =
             button [ onClick Finish ] [ text "Finish" ]
 
-
         renderMove : Party -> Html Msg
         renderMove party =
             div [ class "w-96 h-48 " ]
                 [ case SelectionList.getSelected party of
-                    Just (selectedAlly, _) ->
+                    Just ( selectedAlly, _ ) ->
                         div [ class "h-full w-full flex-col" ]
                             [ div [ class "w-96 h-40" ]
                                 [ selectedAlly.stats.move.inputs
@@ -397,7 +395,7 @@ renderBottom engineArgs model =
         renderInputs party =
             div [ class "flex-grow h-48 border border-gray-900" ]
                 [ case SelectionList.getSelected party of
-                    Just (_, {liveInputs}) ->
+                    Just ( _, { liveInputs } ) ->
                         div [ class "flex-col" ] (List.map renderLiveInput liveInputs)
 
                     Nothing ->
@@ -407,7 +405,7 @@ renderBottom engineArgs model =
     div [ class "w-full h-full border-gray-500 border-4 bg-gray-400 flex items-center p-2 space-x-2" ]
         [ renderPortrait <| model.party
         , renderPrompt <| model.party
-        , renderMove <|  model.party
+        , renderMove <| model.party
         , renderInputs <| model.party
         ]
 

@@ -22,6 +22,18 @@ suite =
                         |> SelectionList.select 0 "data"
                         |> Result.map SelectionList.getSelected
                         |> Expect.equal (Ok (Just ( 'a', "data" )))
+            , test "list is the same after selecting" <|
+                \_ ->
+                    SelectionList.create [ 'a', 'b', 'c' ]
+                        |> SelectionList.select 0 "data"
+                        |> Result.map SelectionList.toList
+                        |> Expect.equal (Ok [ 'a', 'b', 'c' ])
+            , test "list is the same after selecting the last element" <|
+                \_ ->
+                    SelectionList.create [ 'a', 'b', 'c' ]
+                        |> SelectionList.select 2 "data"
+                        |> Result.map SelectionList.toList
+                        |> Expect.equal (Ok [ 'a', 'b', 'c' ])
             , test "returns an Err if trying to select out of range" <|
                 \_ ->
                     SelectionList.create [ 'a', 'b', 'c' ]
