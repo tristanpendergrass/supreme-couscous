@@ -9,6 +9,7 @@ module SelectionList exposing
     , toList
     )
 
+import Html.Attributes exposing (itemprop)
 import List.Extra
 
 
@@ -73,15 +74,27 @@ mapSelectionData mapFn (SelectionList first maybeEl second) =
             Ok <| SelectionList first newEl second
 
 
-mapItems : (Bool -> a -> b) -> SelectionList a t -> List b
+mapItems : (Bool -> Int -> a -> b) -> SelectionList a t -> List b
 mapItems mapFn (SelectionList first maybeEl second) =
-    List.concat
-        [ List.map (mapFn False) first
-        , case maybeEl of
-            Just ( el, _ ) ->
-                [ mapFn True el ]
+    let
+        selectionList =
+            SelectionList first maybeEl second
+    in
+    case maybeEl of
+        Nothing ->
+            List.indexedMap (mapFn False) (toList selectionList)
 
-            Nothing ->
-                []
-        , List.map (mapFn False) second
-        ]
+        Just _ ->
+            let
+                selectedIndex =
+                    List.length first
+            in
+            List.indexedMap
+                (\index item ->
+                    if index == selectedIndex then
+                        mapFn True index item
+
+                    else
+                        mapFn False index item
+                )
+                (toList selectionList)

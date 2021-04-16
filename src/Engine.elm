@@ -304,11 +304,11 @@ renderTop engineArgs model =
         renderAllies =
             div [ class "border border-dashed h-full w-96 flex-col" ]
                 (SelectionList.mapItems
-                    (\isSelected ally ->
+                    (\isSelected index ally ->
                         div [ class "w-full h-1/3 flex items-center" ]
                             [ div
                                 [ class "ml-4" ]
-                                [ renderAlly isSelected ally.stats.battleUrl (SelectAlly (Just 0))
+                                [ renderAlly isSelected ally.stats.battleUrl (SelectAlly (Just index))
                                 ]
                             ]
                     )
