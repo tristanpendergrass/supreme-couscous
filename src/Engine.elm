@@ -353,20 +353,32 @@ renderBottom engineArgs model =
                         div [] []
                 ]
 
+        inputContainer =
+            "flex items-center h-8 border-2 border-gray-900 mb-2 cursor-pointer"
+
+        inputTrigger =
+            "py-1 px-2 bg-gray-900 text-gray-100"
+
+        inputLabel =
+            "py-1 px-2"
+
         renderInput : Input -> Html Msg
         renderInput input =
             let
                 ( trigger, name ) =
                     input
             in
-            div [ class "flex items-center h-8 border-2 border-gray-900 mb-2 cursor-pointer", onClick (Input input) ]
-                [ div [ class "py-1 px-2 bg-gray-900 text-gray-100" ] [ text <| String.fromChar trigger ]
-                , div [ class "py-1 px-2" ] [ text name ]
+            button [ class inputContainer, onClick (Input input) ]
+                [ div [ class inputTrigger ] [ text <| String.fromChar trigger ]
+                , div [ class inputLabel ] [ text name ]
                 ]
 
         renderFinish : EngineArgMove -> Html Msg
         renderFinish _ =
-            button [ onClick Finish ] [ text "Finish" ]
+            button [ class inputContainer, onClick Finish ]
+                [ div [ class inputTrigger ] [ text "Enter" ]
+                , div [ class inputLabel ] [ text "Finish" ]
+                ]
 
         renderMove : Party -> Html Msg
         renderMove party =
