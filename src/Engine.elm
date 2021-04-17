@@ -1,4 +1,4 @@
-port module Engine exposing (EngineArgAlly, EngineArgMove, Instance, create)
+port module Engine exposing (EngineArgAlly, EngineArgEnemy, EngineArgMove, Instance, create)
 
 import Browser
 import Browser.Events
@@ -45,9 +45,16 @@ type alias EngineArgAlly =
     }
 
 
+type alias EngineArgEnemy =
+    { battleUrl : String
+    , maxHealth : Int
+    }
+
+
 type alias EngineArgs =
     { title : String
     , initialParty : List EngineArgAlly
+    , initialEnemy : EngineArgEnemy
     }
 
 
@@ -78,8 +85,15 @@ type alias Party =
     SelectionList GameAlly Selection
 
 
+type alias Enemy =
+    { stats : EngineArgEnemy
+    , health : Int
+    }
+
+
 type alias Model =
     { party : Party
+    , enemy : Enemy
     }
 
 
@@ -90,8 +104,11 @@ init engineArgs _ =
             engineArgs.initialParty
                 |> List.map GameAlly
                 |> SelectionList.create
+
+        initialEnemy =
+            { stats = engineArgs.initialEnemy, health = engineArgs.initialEnemy.maxHealth }
     in
-    ( { party = initialSelectionList }, Cmd.none )
+    ( { party = initialSelectionList, enemy = initialEnemy }, Cmd.none )
 
 
 
@@ -273,6 +290,9 @@ toGlobalUserInput string =
         "q" ->
             Just (SelectAlly Nothing)
 
+        "Enter" ->
+            Just (SelectAlly Nothing)
+
         _ ->
             Nothing
 
@@ -315,16 +335,17 @@ renderTop engineArgs model =
                     model.party
                 )
 
-        renderEnemy =
+        renderEnemy : Enemy -> Html Msg
+        renderEnemy enemy =
             div [ class "border border-dashed border-red-500 h-full w-96" ]
-                [ div [ class "w-full h-full flex items-center" ]
-                    [ div [ class "w-24 h-24 rounded-full bg-red-600 mr-12" ] []
+                [ div [ class "w-full h-full flex items-center justify-center" ]
+                    [ img [ class "inline-block h-48", src enemy.stats.battleUrl ] []
                     ]
                 ]
     in
     div [ class "w-full h-full bg-blue-400 flex justify-between" ]
         [ renderAllies
-        , renderEnemy
+        , renderEnemy model.enemy
         ]
 
 

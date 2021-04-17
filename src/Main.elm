@@ -50,10 +50,16 @@ allyThree =
     }
 
 
+enemy : Engine.EngineArgEnemy
+enemy =
+    { battleUrl = "red_boy.png", maxHealth = 100 }
+
+
 main : Engine.Instance
 main =
     Engine.create
         { title = "A Bun Worth Fighting For"
         , initialParty =
             [ allyOne, allyTwo, allyThree ]
+        , initialEnemy = enemy
         }
