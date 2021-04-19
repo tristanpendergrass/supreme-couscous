@@ -1,4 +1,4 @@
-port module Engine exposing (EngineArgAlly, EngineArgEnemy, EngineArgMove, Instance, create)
+port module Engine exposing (EngineArgAlly, EngineArgEnemy, EngineArgMove, Instance, create, damage)
 
 import Browser
 import Browser.Events
@@ -31,8 +31,12 @@ type alias Input =
     ( Char, String )
 
 
+type EngineArgEffect
+    = Damage Int
+
+
 type alias EngineArgMove =
-    { damage : Int
+    { onSuccess : List EngineArgEffect
     , prompt : String
     , inputs : List Input
     }
@@ -65,6 +69,11 @@ create engineArgs =
 
 
 -- MODEL
+
+
+damage : Int -> EngineArgEffect
+damage =
+    Damage
 
 
 type alias Selection =
@@ -128,6 +137,42 @@ type Msg
 updateParty : (Party -> Party) -> Model -> Model
 updateParty updateFn model =
     { model | party = updateFn model.party }
+
+
+getCompletedAlly : Model -> Maybe GameAlly
+getCompletedAlly model =
+    SelectionList.getSelected model.party
+        |> Maybe.andThen
+            (\( selectedAlly, { liveInputs } ) ->
+                if Utils.isPatternComplete selectedAlly.stats.move.inputs (List.reverse liveInputs) then
+                    Just selectedAlly
+
+                else
+                    Nothing
+            )
+
+
+isPatternComplete : Model -> Bool
+isPatternComplete model =
+    case getCompletedAlly model of
+        Just _ ->
+            True
+
+        Nothing ->
+            False
+
+
+dealDamageToEnemy : Int -> Model -> Model
+dealDamageToEnemy amount model =
+    let
+        oldEnemy =
+            model.enemy
+
+        newEnemy : Enemy
+        newEnemy =
+            { oldEnemy | health = oldEnemy.health - amount }
+    in
+    { model | enemy = newEnemy }
 
 
 update : EngineArgs -> Msg -> Model -> ( Model, Cmd Msg )
@@ -197,24 +242,38 @@ update engineArgs msg model =
                     ( { model | party = newParty }, emitSound sounds.attack )
 
         Finish ->
-            let
-                isPatternComplete =
-                    case SelectionList.getSelected model.party of
-                        Just ( selectedAlly, { liveInputs } ) ->
-                            Utils.isPatternComplete selectedAlly.stats.move.inputs (List.reverse liveInputs)
+            case getCompletedAlly model of
+                Nothing ->
+                    -- Finish was called without a completed pattern for a selected ally
+                    let
+                        newModel =
+                            model
+                                |> updateParty SelectionList.clearSelection
+                    in
+                    ( newModel, emitSound sounds.select )
 
-                        Nothing ->
-                            False
+                Just selectedAlly ->
+                    let
+                        applyOnSuccess : Model -> Model
+                        applyOnSuccess oldModel =
+                            let
+                                effects =
+                                    selectedAlly.stats.move.onSuccess
 
-                newModel =
-                    model
-                        |> updateParty SelectionList.clearSelection
-            in
-            if isPatternComplete then
-                ( newModel, emitSound sounds.attack )
+                                applyEffect : EngineArgEffect -> Model -> Model
+                                applyEffect effect m =
+                                    case effect of
+                                        Damage amount ->
+                                            dealDamageToEnemy amount m
+                            in
+                            List.foldl applyEffect oldModel effects
 
-            else
-                ( newModel, emitSound sounds.select )
+                        newModel =
+                            model
+                                |> applyOnSuccess
+                                |> updateParty SelectionList.clearSelection
+                    in
+                    ( newModel, emitSound sounds.attack )
 
 
 
@@ -291,7 +350,7 @@ toGlobalUserInput string =
             Just (SelectAlly Nothing)
 
         "Enter" ->
-            Just (SelectAlly Nothing)
+            Just Finish
 
         _ ->
             Nothing
@@ -338,8 +397,9 @@ renderTop engineArgs model =
         renderEnemy : Enemy -> Html Msg
         renderEnemy enemy =
             div [ class "border border-dashed border-red-500 h-full w-96" ]
-                [ div [ class "w-full h-full flex items-center justify-center" ]
+                [ div [ class "w-full h-full flex items-center justify-center flex-col" ]
                     [ img [ class "inline-block h-48", src enemy.stats.battleUrl ] []
+                    , div [] [ text <| String.fromInt enemy.health ]
                     ]
                 ]
     in
@@ -426,14 +486,14 @@ renderBottom engineArgs model =
 
         renderInputs : Party -> Html Msg
         renderInputs party =
-            div [ class "flex-grow h-48 border border-gray-900" ]
-                [ case SelectionList.getSelected party of
-                    Just ( _, { liveInputs } ) ->
-                        div [ class "flex-col" ] (List.map renderLiveInput liveInputs)
+            case SelectionList.getSelected party of
+                Just ( _, { liveInputs } ) ->
+                    div [ class "flex-grow h-48 border border-gray-900" ]
+                        [ div [ class "flex-col" ] (List.map renderLiveInput liveInputs)
+                        ]
 
-                    Nothing ->
-                        div [] []
-                ]
+                Nothing ->
+                    div [] []
     in
     div [ class "w-full h-full border-gray-500 border-4 bg-gray-400 flex items-center p-2 space-x-2" ]
         [ renderPortrait <| model.party

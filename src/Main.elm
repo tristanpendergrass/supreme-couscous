@@ -8,7 +8,7 @@ allyOne =
     { avatarUrl = "thief_portrait.png"
     , battleUrl = "thief.png"
     , move =
-        { damage = 5
+        { onSuccess = [ Engine.damage 10 ]
         , prompt = "A quick jab, followed by a slash..."
         , inputs =
             [ ( 'j', "Jab" )
@@ -23,7 +23,7 @@ allyTwo =
     { avatarUrl = "knight_portrait.png"
     , battleUrl = "knight.png"
     , move =
-        { damage = 10
+        { onSuccess = [ Engine.damage 5 ]
         , prompt = "Analyze the opponent's weak spots and then strike twice..."
         , inputs =
             [ ( 'a', "Analyze" )
@@ -39,7 +39,7 @@ allyThree =
     { avatarUrl = "priest_portrait.png"
     , battleUrl = "priest.png"
     , move =
-        { damage = 2
+        { onSuccess = [ Engine.damage 20 ]
         , prompt = "Focus, determination, and then yell 'hoody hoo!'..."
         , inputs =
             [ ( 'f', "Focus" )
