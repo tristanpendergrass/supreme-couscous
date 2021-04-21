@@ -2,6 +2,7 @@ port module Engine exposing (EngineArgAlly, EngineArgEnemy, EngineArgMove, Insta
 
 import Browser
 import Browser.Events
+import Health exposing (Health)
 import Html exposing (Html, button, div, img, text)
 import Html.Attributes exposing (class, src, style)
 import Html.Events exposing (onClick)
@@ -96,7 +97,7 @@ type alias Party =
 
 type alias Enemy =
     { stats : EngineArgEnemy
-    , health : Int
+    , health : Health
     }
 
 
@@ -115,7 +116,13 @@ init engineArgs _ =
                 |> SelectionList.create
 
         initialEnemy =
-            { stats = engineArgs.initialEnemy, health = engineArgs.initialEnemy.maxHealth }
+            { stats = engineArgs.initialEnemy
+            , health =
+                Health.create
+                    { max = engineArgs.initialEnemy.maxHealth
+                    , current = engineArgs.initialEnemy.maxHealth
+                    }
+            }
     in
     ( { party = initialSelectionList, enemy = initialEnemy }, Cmd.none )
 
@@ -170,7 +177,7 @@ dealDamageToEnemy amount model =
 
         newEnemy : Enemy
         newEnemy =
-            { oldEnemy | health = oldEnemy.health - amount }
+            { oldEnemy | health = Health.subtract amount oldEnemy.health }
     in
     { model | enemy = newEnemy }
 
@@ -397,9 +404,9 @@ renderTop engineArgs model =
         renderEnemy : Enemy -> Html Msg
         renderEnemy enemy =
             div [ class "border border-dashed border-red-500 h-full w-96" ]
-                [ div [ class "w-full h-full flex items-center justify-center flex-col" ]
+                [ div [ class "w-full h-full flex items-center justify-center flex-col space-y-2" ]
                     [ img [ class "inline-block h-48", src enemy.stats.battleUrl ] []
-                    , div [] [ text <| String.fromInt enemy.health ]
+                    , Health.render 150 enemy.health
                     ]
                 ]
     in
