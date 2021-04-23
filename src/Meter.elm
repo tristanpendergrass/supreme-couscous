@@ -1,33 +1,33 @@
-module Health exposing (Health, add, create, render, subtract)
+module Meter exposing (Meter, add, create, render, subtract)
 
 import Html exposing (Html, div)
 import Html.Attributes exposing (class, style)
 
 
-type Health
-    = Health { max : Int, current : Int }
+type Meter
+    = Meter { max : Float, current : Float }
 
 
-create : { max : Int, current : Int } -> Health
+create : { max : Float, current : Float } -> Meter
 create params =
-    Health params
+    Meter params
 
 
-add : Int -> Health -> Health
-add amount (Health { max, current }) =
-    Health { max = max, current = current + amount }
+add : Float -> Meter -> Meter
+add amount (Meter { max, current }) =
+    Meter { max = max, current = current + amount }
 
 
-subtract : Int -> Health -> Health
-subtract amount (Health { max, current }) =
-    Health { max = max, current = current - amount }
+subtract : Float -> Meter -> Meter
+subtract amount (Meter { max, current }) =
+    Meter { max = max, current = current - amount }
 
 
-render : Int -> Health -> Html msg
-render width (Health { max, current }) =
+render : Int -> Meter -> Html msg
+render width (Meter { max, current }) =
     let
         percentFilled =
-            toFloat current / toFloat max
+            current / max
 
         maxPixelWidth =
             toFloat width

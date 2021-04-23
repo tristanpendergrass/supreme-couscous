@@ -2,12 +2,12 @@ port module Engine exposing (EngineArgAlly, EngineArgEnemy, EngineArgMove, Insta
 
 import Browser
 import Browser.Events
-import Health exposing (Health)
 import Html exposing (Html, button, div, img, text)
 import Html.Attributes exposing (class, src, style)
 import Html.Events exposing (onClick)
 import Json.Decode as Decode
 import List.Extra
+import Meter exposing (Meter)
 import SelectionList exposing (SelectionList)
 import Utils
 
@@ -97,7 +97,7 @@ type alias Party =
 
 type alias Enemy =
     { stats : EngineArgEnemy
-    , health : Health
+    , health : Meter
     }
 
 
@@ -118,9 +118,9 @@ init engineArgs _ =
         initialEnemy =
             { stats = engineArgs.initialEnemy
             , health =
-                Health.create
-                    { max = engineArgs.initialEnemy.maxHealth
-                    , current = engineArgs.initialEnemy.maxHealth
+                Meter.create
+                    { max = toFloat engineArgs.initialEnemy.maxHealth
+                    , current = toFloat engineArgs.initialEnemy.maxHealth
                     }
             }
     in
@@ -177,7 +177,7 @@ dealDamageToEnemy amount model =
 
         newEnemy : Enemy
         newEnemy =
-            { oldEnemy | health = Health.subtract amount oldEnemy.health }
+            { oldEnemy | health = Meter.subtract (toFloat amount) oldEnemy.health }
     in
     { model | enemy = newEnemy }
 
@@ -406,7 +406,7 @@ renderTop engineArgs model =
             div [ class "border border-dashed border-red-500 h-full w-96" ]
                 [ div [ class "w-full h-full flex items-center justify-center flex-col space-y-2" ]
                     [ img [ class "inline-block h-48", src enemy.stats.battleUrl ] []
-                    , Health.render 150 enemy.health
+                    , Meter.render 150 enemy.health
                     ]
                 ]
     in
