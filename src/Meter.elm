@@ -23,9 +23,9 @@ type alias Meter =
     { max : Float, current : Float, color : Color, displaySize : Int }
 
 
-create : { max : Float, current : Float } -> Meter
-create { max, current } =
-    { max = max, current = current, color = Red, displaySize = 100 }
+create : Float -> Meter
+create max =
+    { max = max, current = max, color = Red, displaySize = 100 }
 
 
 add : Float -> Meter -> Meter

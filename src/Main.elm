@@ -16,6 +16,7 @@ allyOne =
             ]
         }
     , maxHealth = 100
+    , maxEnergy = 75
     }
 
 
@@ -33,6 +34,7 @@ allyTwo =
             ]
         }
     , maxHealth = 100
+    , maxEnergy = 100
     }
 
 
@@ -50,6 +52,7 @@ allyThree =
             ]
         }
     , maxHealth = 100
+    , maxEnergy = 175
     }
 
 

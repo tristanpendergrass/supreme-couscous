@@ -12,6 +12,16 @@ import SelectionList exposing (SelectionList)
 import Utils
 
 
+isNothing : Maybe a -> Bool
+isNothing maybe =
+    case maybe of
+        Nothing ->
+            True
+
+        _ ->
+            False
+
+
 images =
     { selectionArrow = "arrow.png"
     , battleSelection = "battle_selection_2.png"
@@ -48,6 +58,7 @@ type alias EngineArgAlly =
     , battleUrl : String
     , move : EngineArgMove
     , maxHealth : Int
+    , maxEnergy : Int
     }
 
 
@@ -91,6 +102,7 @@ addInputToSelection input selection =
 type alias Ally =
     { stats : EngineArgAlly
     , health : Meter
+    , energy : Meter
     }
 
 
@@ -116,7 +128,8 @@ init engineArgs _ =
         createAlly : EngineArgAlly -> Ally
         createAlly stats =
             { stats = stats
-            , health = Meter.create { current = toFloat stats.maxHealth, max = toFloat stats.maxHealth }
+            , health = Meter.create (toFloat stats.maxHealth)
+            , energy = Meter.create (toFloat stats.maxEnergy)
             }
 
         initialSelectionList =
@@ -126,11 +139,7 @@ init engineArgs _ =
 
         initialEnemy =
             { stats = engineArgs.initialEnemy
-            , health =
-                Meter.create
-                    { max = toFloat engineArgs.initialEnemy.maxHealth
-                    , current = toFloat engineArgs.initialEnemy.maxHealth
-                    }
+            , health = Meter.create (toFloat engineArgs.initialEnemy.maxHealth)
             }
     in
     ( { party = initialSelectionList, enemy = initialEnemy }, Cmd.none )
@@ -382,38 +391,80 @@ subscriptions engineArgs model =
 -- VIEW
 
 
+inputContainer : String
+inputContainer =
+    "flex items-center h-8 border-2 border-gray-900 cursor-pointer"
+
+
+inputTrigger : String
+inputTrigger =
+    "py-1 px-2 bg-gray-900 text-gray-100"
+
+
+inputLabel : String
+inputLabel =
+    "py-1 px-2"
+
+
 renderTop : Model -> Html Msg
 renderTop model =
     let
-        renderAlly : Bool -> Ally -> Msg -> Html Msg
-        renderAlly isSelected ally selectionMsg =
+        renderAlly : Bool -> Ally -> Msg -> Int -> Html Msg
+        renderAlly isSelected ally selectionMsg index =
             let
-                { stats, health } =
+                { stats, health, energy } =
                     ally
 
                 { battleUrl } =
                     stats
 
+                isAnyAllySelected =
+                    model.party
+                        |> SelectionList.getSelected
+                        |> isNothing
+
                 allyStats =
-                    div []
-                        [ health
+                    div [ class "flex space-x-1" ]
+                        [ energy
+                            |> Meter.setColor Meter.Blue
+                            |> Meter.setDisplaySize 75
+                            |> Meter.renderVertical
+                        , health
                             |> Meter.setDisplaySize 75
                             |> Meter.renderVertical
                         ]
 
                 allyImage =
                     div [ class "relative" ]
-                        [ img [ class "w-24 h-24", src battleUrl, onClick selectionMsg ] []
+                        [ img [ class "w-24 h-24", src battleUrl ] []
                         , if isSelected then
                             img [ class "absolute inline-block w-24 h-24 top-0 left-0", src images.battleSelection ] []
 
                           else
                             div [] []
                         ]
+
+                allySelector =
+                    div
+                        [ class inputContainer
+                        , class <|
+                            if isAnyAllySelected then
+                                ""
+
+                            else
+                                "invisible"
+                        , onClick selectionMsg
+                        ]
+                        [ div [ class inputTrigger ] [ text <| String.fromInt (index + 1) ]
+                        , div [ class inputLabel ] [ text "Select" ]
+                        ]
             in
-            div
-                [ class "flex items-end space-x-2" ]
-                [ div [ class "mb-2" ] [ allyStats ], allyImage ]
+            div [ class "flex-col space-y-2" ]
+                [ div [ class "flex w-full justify-center" ]
+                    [ allySelector ]
+                , div [ class "flex items-end space-x-2" ]
+                    [ div [ class "mb-2" ] [ allyStats ], allyImage ]
+                ]
 
         renderAllies =
             div [ class "border border-dashed h-full w-96 flex-col" ]
@@ -422,7 +473,7 @@ renderTop model =
                         div [ class "w-full h-1/3 flex items-center" ]
                             [ div
                                 [ class "ml-4" ]
-                                [ renderAlly isSelected ally (SelectAlly (Just index))
+                                [ renderAlly isSelected ally (SelectAlly (Just index)) index
                                 ]
                             ]
                     )
@@ -470,15 +521,6 @@ renderBottom model =
                     Nothing ->
                         div [] []
                 ]
-
-        inputContainer =
-            "flex items-center h-8 border-2 border-gray-900 mb-2 cursor-pointer"
-
-        inputTrigger =
-            "py-1 px-2 bg-gray-900 text-gray-100"
-
-        inputLabel =
-            "py-1 px-2"
 
         renderInput : Input -> Html Msg
         renderInput input =
