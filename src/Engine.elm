@@ -382,8 +382,8 @@ subscriptions engineArgs model =
 -- VIEW
 
 
-renderTop : EngineArgs -> Model -> Html Msg
-renderTop engineArgs model =
+renderTop : Model -> Html Msg
+renderTop model =
     let
         renderAlly : Bool -> String -> Msg -> Html Msg
         renderAlly isSelected imageUrl selectionMsg =
@@ -415,7 +415,9 @@ renderTop engineArgs model =
             div [ class "border border-dashed border-red-500 h-full w-96" ]
                 [ div [ class "w-full h-full flex items-center justify-center flex-col space-y-2" ]
                     [ img [ class "inline-block h-48", src enemy.stats.battleUrl ] []
-                    , Meter.render 150 enemy.health
+                    , enemy.health
+                        |> Meter.setDisplaySize 150
+                        |> Meter.renderHorizontal
                     ]
                 ]
     in
@@ -425,8 +427,8 @@ renderTop engineArgs model =
         ]
 
 
-renderBottom : EngineArgs -> Model -> Html Msg
-renderBottom engineArgs model =
+renderBottom : Model -> Html Msg
+renderBottom model =
     let
         renderPortrait : Party -> Html Msg
         renderPortrait party =
@@ -527,7 +529,7 @@ view engineArgs model =
             , style "width" "64rem" -- i.e. w-256
             , style "height" "42rem" -- i.e. h-168
             ]
-            [ div [ class "w-full h-2/3" ] [ renderTop engineArgs model ]
-            , div [ class "w-full h-1/3" ] [ renderBottom engineArgs model ]
+            [ div [ class "w-full h-2/3" ] [ renderTop model ]
+            , div [ class "w-full h-1/3" ] [ renderBottom model ]
             ]
         ]

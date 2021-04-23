@@ -1,36 +1,61 @@
-module Meter exposing (Meter, add, create, render, subtract)
+module Meter exposing (Color(..), Meter, add, create, renderHorizontal, renderVertical, setColor, setDisplaySize, subtract)
 
 import Html exposing (Html, div)
 import Html.Attributes exposing (class, style)
 
 
-type Meter
-    = Meter { max : Float, current : Float }
+type Color
+    = Red
+    | Blue
+
+
+getBgStyle : Color -> String
+getBgStyle color =
+    case color of
+        Red ->
+            "bg-red-500"
+
+        Blue ->
+            "bg-blue-700"
+
+
+type alias Meter =
+    { max : Float, current : Float, color : Color, displaySize : Int }
 
 
 create : { max : Float, current : Float } -> Meter
-create params =
-    Meter params
+create { max, current } =
+    { max = max, current = current, color = Red, displaySize = 100 }
 
 
 add : Float -> Meter -> Meter
-add amount (Meter { max, current }) =
-    Meter { max = max, current = current + amount }
+add amount oldMeter =
+    { oldMeter | current = oldMeter.current + amount }
 
 
 subtract : Float -> Meter -> Meter
-subtract amount (Meter { max, current }) =
-    Meter { max = max, current = current - amount }
+subtract amount oldMeter =
+    { oldMeter | current = oldMeter.current - amount }
 
 
-render : Int -> Meter -> Html msg
-render width (Meter { max, current }) =
+setColor : Color -> Meter -> Meter
+setColor newColor meter =
+    { meter | color = newColor }
+
+
+setDisplaySize : Int -> Meter -> Meter
+setDisplaySize newSize meter =
+    { meter | displaySize = newSize }
+
+
+renderHorizontal : Meter -> Html msg
+renderHorizontal { max, current, color, displaySize } =
     let
         percentFilled =
             current / max
 
         maxPixelWidth =
-            toFloat width
+            toFloat displaySize
 
         currentPixelWidth =
             maxPixelWidth * percentFilled
@@ -46,5 +71,32 @@ render width (Meter { max, current }) =
         [ class "h-4 border-2 border-black bg-white overflow-hidden"
         , style "width" (toPx maxPixelWidth)
         ]
-        [ div [ class "h-8 bg-red-500", style "width" (toPx currentPixelWidth) ] []
+        [ div [ class "h-4", class (getBgStyle color), style "width" (toPx currentPixelWidth) ] []
+        ]
+
+
+renderVertical : Meter -> Html msg
+renderVertical { max, current, color, displaySize } =
+    let
+        percentFilled =
+            current / max
+
+        maxPixelHeight =
+            toFloat displaySize
+
+        currentPixelHeight =
+            maxPixelHeight * percentFilled
+
+        appendString second first =
+            first ++ second
+
+        toPx : Float -> String
+        toPx =
+            round >> String.fromInt >> appendString "px"
+    in
+    div
+        [ class "w-4 border-2 border-black bg-white overflow-hidden relative"
+        , style "height" (toPx maxPixelHeight)
+        ]
+        [ div [ class "w-4 absolute bottom-0 ", class (getBgStyle color), style "height" (toPx currentPixelHeight) ] []
         ]
