@@ -385,16 +385,35 @@ subscriptions engineArgs model =
 renderTop : Model -> Html Msg
 renderTop model =
     let
-        renderAlly : Bool -> String -> Msg -> Html Msg
-        renderAlly isSelected imageUrl selectionMsg =
-            div [ class "relative" ]
-                [ img [ class "w-24 h-24", src imageUrl, onClick selectionMsg ] []
-                , if isSelected then
-                    img [ class "absolute inline-block w-24 h-24 top-0 left-0", src images.battleSelection ] []
+        renderAlly : Bool -> Ally -> Msg -> Html Msg
+        renderAlly isSelected ally selectionMsg =
+            let
+                { stats, health } =
+                    ally
 
-                  else
-                    div [] []
-                ]
+                { battleUrl } =
+                    stats
+
+                allyStats =
+                    div []
+                        [ health
+                            |> Meter.setDisplaySize 75
+                            |> Meter.renderVertical
+                        ]
+
+                allyImage =
+                    div [ class "relative" ]
+                        [ img [ class "w-24 h-24", src battleUrl, onClick selectionMsg ] []
+                        , if isSelected then
+                            img [ class "absolute inline-block w-24 h-24 top-0 left-0", src images.battleSelection ] []
+
+                          else
+                            div [] []
+                        ]
+            in
+            div
+                [ class "flex items-end space-x-2" ]
+                [ div [ class "mb-2" ] [ allyStats ], allyImage ]
 
         renderAllies =
             div [ class "border border-dashed h-full w-96 flex-col" ]
@@ -403,7 +422,7 @@ renderTop model =
                         div [ class "w-full h-1/3 flex items-center" ]
                             [ div
                                 [ class "ml-4" ]
-                                [ renderAlly isSelected ally.stats.battleUrl (SelectAlly (Just index))
+                                [ renderAlly isSelected ally (SelectAlly (Just index))
                                 ]
                             ]
                     )
