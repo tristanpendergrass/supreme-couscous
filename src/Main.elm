@@ -15,6 +15,7 @@ allyOne =
             , ( 's', "Slash" )
             ]
         }
+    , maxHealth = 100
     }
 
 
@@ -31,6 +32,7 @@ allyTwo =
             , ( 's', "Strike" )
             ]
         }
+    , maxHealth = 100
     }
 
 
@@ -47,6 +49,7 @@ allyThree =
             , ( 'h', "Hoody Hoo!" )
             ]
         }
+    , maxHealth = 100
     }
 
 

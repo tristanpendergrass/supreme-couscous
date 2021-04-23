@@ -47,6 +47,7 @@ type alias EngineArgAlly =
     { avatarUrl : String
     , battleUrl : String
     , move : EngineArgMove
+    , maxHealth : Int
     }
 
 
@@ -88,7 +89,9 @@ addInputToSelection input selection =
 
 
 type alias GameAlly =
-    { stats : EngineArgAlly }
+    { stats : EngineArgAlly
+    , health : Meter
+    }
 
 
 type alias Party =
@@ -110,9 +113,15 @@ type alias Model =
 init : EngineArgs -> () -> ( Model, Cmd Msg )
 init engineArgs _ =
     let
+        createAlly : EngineArgAlly -> GameAlly
+        createAlly stats =
+            { stats = stats
+            , health = Meter.create { current = toFloat stats.maxHealth, max = toFloat stats.maxHealth }
+            }
+
         initialSelectionList =
             engineArgs.initialParty
-                |> List.map GameAlly
+                |> List.map createAlly
                 |> SelectionList.create
 
         initialEnemy =
