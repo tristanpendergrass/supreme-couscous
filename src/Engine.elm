@@ -88,14 +88,14 @@ addInputToSelection input selection =
     { selection | liveInputs = input :: selection.liveInputs }
 
 
-type alias GameAlly =
+type alias Ally =
     { stats : EngineArgAlly
     , health : Meter
     }
 
 
 type alias Party =
-    SelectionList GameAlly Selection
+    SelectionList Ally Selection
 
 
 type alias Enemy =
@@ -113,7 +113,7 @@ type alias Model =
 init : EngineArgs -> () -> ( Model, Cmd Msg )
 init engineArgs _ =
     let
-        createAlly : EngineArgAlly -> GameAlly
+        createAlly : EngineArgAlly -> Ally
         createAlly stats =
             { stats = stats
             , health = Meter.create { current = toFloat stats.maxHealth, max = toFloat stats.maxHealth }
@@ -155,7 +155,7 @@ updateParty updateFn model =
     { model | party = updateFn model.party }
 
 
-getCompletedAlly : Model -> Maybe GameAlly
+getCompletedAlly : Model -> Maybe Ally
 getCompletedAlly model =
     SelectionList.getSelected model.party
         |> Maybe.andThen
@@ -228,7 +228,7 @@ update engineArgs msg model =
 
         Input input ->
             let
-                updateInputs : ( GameAlly, Selection ) -> Selection
+                updateInputs : ( Ally, Selection ) -> Selection
                 updateInputs ( selectedAlly, selection ) =
                     let
                         nextInput : Maybe Input
