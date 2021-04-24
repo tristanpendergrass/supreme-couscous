@@ -2,14 +2,14 @@ module SelectionList exposing
     ( SelectionList
     , clearSelection
     , create
+    , getAt
     , getSelected
     , mapItems
-    , mapSelectionData
+    , mapSelection
     , select
     , toList
     )
 
-import Html.Attributes exposing (itemprop)
 import List.Extra
 
 
@@ -44,6 +44,11 @@ clearSelection =
     toList >> create
 
 
+getAt : Int -> SelectionList a t -> Maybe a
+getAt position =
+    toList >> List.Extra.getAt position
+
+
 select : Int -> t -> SelectionList a t -> Result String (SelectionList a t)
 select position data oldList =
     let
@@ -60,8 +65,8 @@ select position data oldList =
             Result.Ok (SelectionList (List.take position list) (Just ( selected, data )) (List.drop (position + 1) list))
 
 
-mapSelectionData : (( a, t ) -> t) -> SelectionList a t -> Result String (SelectionList a t)
-mapSelectionData mapFn (SelectionList first maybeEl second) =
+mapSelection : (( a, t ) -> ( a, t )) -> SelectionList a t -> Result String (SelectionList a t)
+mapSelection mapFn (SelectionList first maybeEl second) =
     case maybeEl of
         Nothing ->
             Err "Can't modify data with no selection"
@@ -69,7 +74,7 @@ mapSelectionData mapFn (SelectionList first maybeEl second) =
         Just ( el, data ) ->
             let
                 newEl =
-                    Just ( el, mapFn ( el, data ) )
+                    Just (mapFn ( el, data ))
             in
             Ok <| SelectionList first newEl second
 

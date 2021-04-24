@@ -12,14 +12,14 @@ import SelectionList exposing (SelectionList)
 import Utils
 
 
-isNothing : Maybe a -> Bool
-isNothing maybe =
+isJust : Maybe a -> Bool
+isJust maybe =
     case maybe of
         Nothing ->
-            True
+            False
 
         _ ->
-            False
+            True
 
 
 images =
@@ -224,20 +224,35 @@ update engineArgs msg model =
                 Just position ->
                     -- Selection of ally
                     let
-                        updatePosition : Party -> Party
-                        updatePosition party =
-                            SelectionList.select position { liveInputs = [] } party
-                                |> Result.withDefault party
-
-                        newModel =
-                            model
-                                |> updateParty updatePosition
+                        allyHasEnergy : Bool
+                        allyHasEnergy =
+                            SelectionList.getAt position model.party
+                                |> Maybe.map (.energy >> Meter.isFull)
+                                |> Maybe.withDefault False
                     in
-                    ( newModel, emitSound sounds.select )
+                    if allyHasEnergy then
+                        let
+                            updatePosition : Party -> Party
+                            updatePosition party =
+                                if allyHasEnergy then
+                                    SelectionList.select position { liveInputs = [] } party
+                                        |> Result.withDefault party
+
+                                else
+                                    party
+
+                            newModel =
+                                model
+                                    |> updateParty updatePosition
+                        in
+                        ( newModel, emitSound sounds.select )
+
+                    else
+                        noOp
 
         Input input ->
             let
-                updateInputs : ( Ally, Selection ) -> Selection
+                updateInputs : ( Ally, Selection ) -> ( Ally, Selection )
                 updateInputs ( selectedAlly, selection ) =
                     let
                         nextInput : Maybe Input
@@ -254,12 +269,12 @@ update engineArgs msg model =
                                 |> Maybe.withDefault False
                     in
                     if inputMatches then
-                        addInputToSelection input selection
+                        ( selectedAlly, addInputToSelection input selection )
 
                     else
-                        selection
+                        ( selectedAlly, selection )
             in
-            case SelectionList.mapSelectionData updateInputs model.party of
+            case SelectionList.mapSelection updateInputs model.party of
                 Err _ ->
                     noOp
 
@@ -293,9 +308,23 @@ update engineArgs msg model =
                             in
                             List.foldl applyEffect oldModel effects
 
+                        drainMeter : Ally -> Ally
+                        drainMeter ally =
+                            { ally | energy = Meter.drain ally.energy }
+
+                        updateEnergy : Party -> Party
+                        updateEnergy party =
+                            party
+                                |> SelectionList.mapSelection
+                                    (\( ally, selectionData ) ->
+                                        ( drainMeter ally, selectionData )
+                                    )
+                                |> Result.withDefault party
+
                         newModel =
                             model
                                 |> applyOnSuccess
+                                |> updateParty updateEnergy
                                 |> updateParty SelectionList.clearSelection
                     in
                     ( newModel, emitSound sounds.attack )
@@ -421,7 +450,11 @@ renderTop model =
                 isAnyAllySelected =
                     model.party
                         |> SelectionList.getSelected
-                        |> isNothing
+                        |> isJust
+
+                allyCanBeSelected =
+                    not isAnyAllySelected
+                        && Meter.isFull ally.energy
 
                 allyStats =
                     div [ class "flex space-x-1" ]
@@ -448,7 +481,7 @@ renderTop model =
                     div
                         [ class inputContainer
                         , class <|
-                            if isAnyAllySelected then
+                            if allyCanBeSelected then
                                 ""
 
                             else

@@ -1,4 +1,16 @@
-module Meter exposing (Color(..), Meter, add, create, renderHorizontal, renderVertical, setColor, setDisplaySize, subtract)
+module Meter exposing
+    ( Color(..)
+    , Meter
+    , add
+    , create
+    , drain
+    , isFull
+    , renderHorizontal
+    , renderVertical
+    , setColor
+    , setDisplaySize
+    , subtract
+    )
 
 import Html exposing (Html, div)
 import Html.Attributes exposing (class, style)
@@ -100,3 +112,13 @@ renderVertical { max, current, color, displaySize } =
         ]
         [ div [ class "w-4 absolute bottom-0 ", class (getBgStyle color), style "height" (toPx currentPixelHeight) ] []
         ]
+
+
+isFull : Meter -> Bool
+isFull { current, max } =
+    current == max
+
+
+drain : Meter -> Meter
+drain meter =
+    { meter | current = 0 }
