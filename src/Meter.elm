@@ -4,6 +4,8 @@ module Meter exposing
     , add
     , create
     , drain
+    , getCurrent
+    , handleAnimationFrame
     , isFull
     , renderHorizontal
     , renderVertical
@@ -58,6 +60,11 @@ setColor newColor meter =
 setDisplaySize : Int -> Meter -> Meter
 setDisplaySize newSize meter =
     { meter | displaySize = newSize }
+
+
+getCurrent : Meter -> Float
+getCurrent { current } =
+    current
 
 
 renderHorizontal : Meter -> Html msg
@@ -122,3 +129,18 @@ isFull { current, max } =
 drain : Meter -> Meter
 drain meter =
     { meter | current = 0 }
+
+
+increment : Float -> Meter -> Meter
+increment amount meter =
+    let
+        newCurrent : Float
+        newCurrent =
+            clamp 0 meter.max (meter.current + amount)
+    in
+    { meter | current = newCurrent }
+
+
+handleAnimationFrame : Float -> Meter -> Meter
+handleAnimationFrame delta meter =
+    increment (delta / 100) meter

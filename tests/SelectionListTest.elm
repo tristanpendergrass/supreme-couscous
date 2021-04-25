@@ -41,16 +41,16 @@ suite =
                         |> Result.map SelectionList.getSelected
                         |> Expect.err
             ]
-        , describe "mapSelectionData"
-            [ test "maps selection data" <|
+        , describe "mapSelection"
+            [ test "maps selection" <|
                 \_ ->
                     let
-                        toBar _ =
-                            "bar"
+                        toBar ( item, _ ) =
+                            ( item, "bar" )
                     in
                     SelectionList.create [ 'a', 'b', 'c' ]
                         |> SelectionList.select 0 "foo"
-                        |> Result.andThen (SelectionList.mapSelectionData toBar)
+                        |> Result.andThen (SelectionList.mapSelection toBar)
                         |> Result.map SelectionList.getSelected
                         |> Expect.equal (Ok (Just ( 'a', "bar" )))
             ]

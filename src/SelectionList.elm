@@ -4,8 +4,9 @@ module SelectionList exposing
     , create
     , getAt
     , getSelected
-    , mapItems
+    , map
     , mapSelection
+    , mapToList
     , select
     , toList
     )
@@ -79,8 +80,8 @@ mapSelection mapFn (SelectionList first maybeEl second) =
             Ok <| SelectionList first newEl second
 
 
-mapItems : (Bool -> Int -> a -> b) -> SelectionList a t -> List b
-mapItems mapFn (SelectionList first maybeEl second) =
+mapToList : (Bool -> Int -> a -> b) -> SelectionList a t -> List b
+mapToList mapFn (SelectionList first maybeEl second) =
     let
         selectionList =
             SelectionList first maybeEl second
@@ -103,3 +104,19 @@ mapItems mapFn (SelectionList first maybeEl second) =
                         mapFn False index item
                 )
                 (toList selectionList)
+
+
+map : (a -> b) -> SelectionList a t -> SelectionList b t
+map mapFn (SelectionList first maybeEl second) =
+    let
+        newFirst =
+            List.map mapFn first
+
+        newSecond =
+            List.map mapFn second
+
+        newEl =
+            maybeEl
+                |> Maybe.andThen (\( el, data ) -> Just ( mapFn el, data ))
+    in
+    SelectionList newFirst newEl newSecond

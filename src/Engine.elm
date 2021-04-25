@@ -157,6 +157,7 @@ type Msg
     | SelectAlly (Maybe Int)
     | Input Input
     | Finish
+    | HandleAnimationFrame Float
 
 
 updateParty : (Party -> Party) -> Model -> Model
@@ -329,6 +330,23 @@ update engineArgs msg model =
                     in
                     ( newModel, emitSound sounds.attack )
 
+        HandleAnimationFrame delta ->
+            let
+                updateAlly : Ally -> Ally
+                updateAlly ally =
+                    { ally | energy = Meter.handleAnimationFrame delta ally.energy }
+
+                updateAllyEnergies : Party -> Party
+                updateAllyEnergies party =
+                    party
+                        |> SelectionList.map updateAlly
+
+                newModel =
+                    model
+                        |> updateParty updateAllyEnergies
+            in
+            ( newModel, Cmd.none )
+
 
 
 -- SUBSCRIPTIONS
@@ -413,7 +431,9 @@ toGlobalUserInput string =
 subscriptions : EngineArgs -> Model -> Sub Msg
 subscriptions engineArgs model =
     Sub.batch
-        [ Browser.Events.onKeyUp (keyDecoder engineArgs model) ]
+        [ Browser.Events.onKeyUp (keyDecoder engineArgs model)
+        , Browser.Events.onAnimationFrameDelta HandleAnimationFrame
+        ]
 
 
 
@@ -501,7 +521,7 @@ renderTop model =
 
         renderAllies =
             div [ class "border border-dashed h-full w-96 flex-col" ]
-                (SelectionList.mapItems
+                (SelectionList.mapToList
                     (\isSelected index ally ->
                         div [ class "w-full h-1/3 flex items-center" ]
                             [ div
