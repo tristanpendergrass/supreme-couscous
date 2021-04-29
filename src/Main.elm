@@ -58,7 +58,7 @@ allyThree =
 
 enemy : Engine.EngineArgEnemy
 enemy =
-    { battleUrl = "red_boy.png", maxHealth = 100 }
+    { battleUrl = "red_boy.png", maxHealth = 100, maxEnergy = 50, damage = 10 }
 
 
 main : Engine.Instance

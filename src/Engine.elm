@@ -65,6 +65,8 @@ type alias EngineArgAlly =
 type alias EngineArgEnemy =
     { battleUrl : String
     , maxHealth : Int
+    , maxEnergy : Int
+    , damage : Int
     }
 
 
@@ -113,6 +115,7 @@ type alias Party =
 type alias Enemy =
     { stats : EngineArgEnemy
     , health : Meter
+    , energy : Meter
     }
 
 
@@ -140,6 +143,7 @@ init engineArgs _ =
         initialEnemy =
             { stats = engineArgs.initialEnemy
             , health = Meter.create (toFloat engineArgs.initialEnemy.maxHealth)
+            , energy = Meter.create (toFloat engineArgs.initialEnemy.maxEnergy)
             }
     in
     ( { party = initialSelectionList, enemy = initialEnemy }, Cmd.none )
@@ -199,6 +203,55 @@ dealDamageToEnemy amount model =
             { oldEnemy | health = Meter.subtract (toFloat amount) oldEnemy.health }
     in
     { model | enemy = newEnemy }
+
+
+updateEnemy : (Enemy -> Enemy) -> Model -> Model
+updateEnemy updateFn model =
+    { model | enemy = updateFn model.enemy }
+
+
+updateEnemyEnergy : Float -> Enemy -> Enemy
+updateEnemyEnergy delta enemy =
+    { enemy | energy = Meter.handleAnimationFrame delta enemy.energy }
+
+
+handleEnemyAttack : Float -> Model -> Model
+handleEnemyAttack delta model =
+    let
+        enemy =
+            model.enemy
+
+        readyToAttack =
+            Meter.isFull enemy.energy
+    in
+    if readyToAttack then
+        let
+            drainEnergy : Enemy -> Enemy
+            drainEnergy oldEnemy =
+                { enemy | energy = Meter.drain oldEnemy.energy }
+
+            removeAllyHealth amount ally =
+                { ally | health = Meter.subtract amount ally.health }
+
+            removeHealth : Party -> Party
+            removeHealth =
+                SelectionList.map (removeAllyHealth (toFloat enemy.stats.damage))
+
+            newModel =
+                model
+                    |> updateParty removeHealth
+                    |> updateEnemy drainEnergy
+                    |> updateEnemy (updateEnemyEnergy delta)
+        in
+        newModel
+
+    else
+        let
+            newModel =
+                model
+                    |> updateEnemy (updateEnemyEnergy delta)
+        in
+        newModel
 
 
 update : EngineArgs -> Msg -> Model -> ( Model, Cmd Msg )
@@ -332,18 +385,19 @@ update engineArgs msg model =
 
         HandleAnimationFrame delta ->
             let
-                updateAlly : Ally -> Ally
-                updateAlly ally =
+                updateAllyEnergy : Ally -> Ally
+                updateAllyEnergy ally =
                     { ally | energy = Meter.handleAnimationFrame delta ally.energy }
 
                 updateAllyEnergies : Party -> Party
                 updateAllyEnergies party =
                     party
-                        |> SelectionList.map updateAlly
+                        |> SelectionList.map updateAllyEnergy
 
                 newModel =
                     model
                         |> updateParty updateAllyEnergies
+                        |> handleEnemyAttack delta
             in
             ( newModel, Cmd.none )
 
