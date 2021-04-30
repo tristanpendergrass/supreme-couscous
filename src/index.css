@@ -31143,6 +31143,62 @@ video {
   }
 }
 
+@-webkit-keyframes wiggle {
+  0%, 100% {
+    transform: rotate(-3deg);
+  }
+
+  50% {
+    transform: rotate(3deg);
+  }
+}
+
+@keyframes wiggle {
+  0%, 100% {
+    transform: rotate(-3deg);
+  }
+
+  50% {
+    transform: rotate(3deg);
+  }
+}
+
+@-webkit-keyframes shake {
+  10%, 90% {
+    transform: translate3d(-1px, 0, 0);
+  }
+
+  20%, 80% {
+    transform: translate3d(2px, 0, 0);
+  }
+
+  30%, 50%, 70% {
+    transform: translate3d(-4px, 0, 0);
+  }
+
+  40%, 60% {
+    transform: translate3d(4px, 0, 0);
+  }
+}
+
+@keyframes shake {
+  10%, 90% {
+    transform: translate3d(-1px, 0, 0);
+  }
+
+  20%, 80% {
+    transform: translate3d(2px, 0, 0);
+  }
+
+  30%, 50%, 70% {
+    transform: translate3d(-4px, 0, 0);
+  }
+
+  40%, 60% {
+    transform: translate3d(4px, 0, 0);
+  }
+}
+
 .animate-none {
   -webkit-animation: none;
           animation: none;
@@ -31166,6 +31222,16 @@ video {
 .animate-bounce {
   -webkit-animation: bounce 1s infinite;
           animation: bounce 1s infinite;
+}
+
+.animate-wiggle {
+  -webkit-animation: wiggle 1s ease-in-out infinite;
+          animation: wiggle 1s ease-in-out infinite;
+}
+
+.animate-shake {
+  -webkit-animation: shake cubic-bezier(.36,.07,.19,.97) 500ms;
+          animation: shake cubic-bezier(.36,.07,.19,.97) 500ms;
 }
 
 .btn {
@@ -61738,6 +61804,16 @@ video {
     -webkit-animation: bounce 1s infinite;
             animation: bounce 1s infinite;
   }
+
+  .sm\:animate-wiggle {
+    -webkit-animation: wiggle 1s ease-in-out infinite;
+            animation: wiggle 1s ease-in-out infinite;
+  }
+
+  .sm\:animate-shake {
+    -webkit-animation: shake cubic-bezier(.36,.07,.19,.97) 500ms;
+            animation: shake cubic-bezier(.36,.07,.19,.97) 500ms;
+  }
 }
 
 @media (min-width: 768px) {
@@ -92282,6 +92358,16 @@ video {
   .md\:animate-bounce {
     -webkit-animation: bounce 1s infinite;
             animation: bounce 1s infinite;
+  }
+
+  .md\:animate-wiggle {
+    -webkit-animation: wiggle 1s ease-in-out infinite;
+            animation: wiggle 1s ease-in-out infinite;
+  }
+
+  .md\:animate-shake {
+    -webkit-animation: shake cubic-bezier(.36,.07,.19,.97) 500ms;
+            animation: shake cubic-bezier(.36,.07,.19,.97) 500ms;
   }
 }
 
@@ -122828,6 +122914,16 @@ video {
     -webkit-animation: bounce 1s infinite;
             animation: bounce 1s infinite;
   }
+
+  .lg\:animate-wiggle {
+    -webkit-animation: wiggle 1s ease-in-out infinite;
+            animation: wiggle 1s ease-in-out infinite;
+  }
+
+  .lg\:animate-shake {
+    -webkit-animation: shake cubic-bezier(.36,.07,.19,.97) 500ms;
+            animation: shake cubic-bezier(.36,.07,.19,.97) 500ms;
+  }
 }
 
 @media (min-width: 1280px) {
@@ -153373,6 +153469,16 @@ video {
     -webkit-animation: bounce 1s infinite;
             animation: bounce 1s infinite;
   }
+
+  .xl\:animate-wiggle {
+    -webkit-animation: wiggle 1s ease-in-out infinite;
+            animation: wiggle 1s ease-in-out infinite;
+  }
+
+  .xl\:animate-shake {
+    -webkit-animation: shake cubic-bezier(.36,.07,.19,.97) 500ms;
+            animation: shake cubic-bezier(.36,.07,.19,.97) 500ms;
+  }
 }
 
 @media (min-width: 1536px) {
@@ -183917,5 +184023,15 @@ video {
   .\32xl\:animate-bounce {
     -webkit-animation: bounce 1s infinite;
             animation: bounce 1s infinite;
+  }
+
+  .\32xl\:animate-wiggle {
+    -webkit-animation: wiggle 1s ease-in-out infinite;
+            animation: wiggle 1s ease-in-out infinite;
+  }
+
+  .\32xl\:animate-shake {
+    -webkit-animation: shake cubic-bezier(.36,.07,.19,.97) 500ms;
+            animation: shake cubic-bezier(.36,.07,.19,.97) 500ms;
   }
 }

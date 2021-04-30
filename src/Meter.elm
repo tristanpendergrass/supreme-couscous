@@ -3,9 +3,11 @@ module Meter exposing
     , Meter
     , add
     , create
+    , createEmpty
     , drain
     , getCurrent
     , handleAnimationFrame
+    , isEmpty
     , isFull
     , renderHorizontal
     , renderVertical
@@ -21,6 +23,7 @@ import Html.Attributes exposing (class, style)
 type Color
     = Red
     | Blue
+    | Purple
 
 
 getBgStyle : Color -> String
@@ -32,6 +35,9 @@ getBgStyle color =
         Blue ->
             "bg-blue-700"
 
+        Purple ->
+            "bg-purple-500"
+
 
 type alias Meter =
     { max : Float, current : Float, color : Color, displaySize : Int }
@@ -40,6 +46,11 @@ type alias Meter =
 create : Float -> Meter
 create max =
     { max = max, current = max, color = Red, displaySize = 100 }
+
+
+createEmpty : Float -> Meter
+createEmpty max =
+    { max = max, current = 0, color = Red, displaySize = 100 }
 
 
 add : Float -> Meter -> Meter
@@ -126,6 +137,11 @@ isFull { current, max } =
     current == max
 
 
+isEmpty : Meter -> Bool
+isEmpty { current } =
+    current == 0
+
+
 drain : Meter -> Meter
 drain meter =
     { meter | current = 0 }
@@ -142,5 +158,5 @@ increment amount meter =
 
 
 handleAnimationFrame : Float -> Meter -> Meter
-handleAnimationFrame delta meter =
-    increment (delta / 100) meter
+handleAnimationFrame delta =
+    increment (delta / 100)

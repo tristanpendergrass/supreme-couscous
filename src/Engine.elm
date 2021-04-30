@@ -101,10 +101,33 @@ addInputToSelection input selection =
     { selection | liveInputs = input :: selection.liveInputs }
 
 
+classForAnimation : Maybe Animation -> String
+classForAnimation animation =
+    case animation of
+        Nothing ->
+            ""
+
+        Just { animationType } ->
+            case animationType of
+                Shake ->
+                    "animate-shake"
+
+
+type AnimationType
+    = Shake
+
+
+type alias Animation =
+    { animationType : AnimationType
+    , meter : Meter
+    }
+
+
 type alias Ally =
     { stats : EngineArgAlly
     , health : Meter
     , energy : Meter
+    , spriteAnimation : Maybe Animation
     }
 
 
@@ -116,6 +139,7 @@ type alias Enemy =
     { stats : EngineArgEnemy
     , health : Meter
     , energy : Meter
+    , spriteAnimation : Maybe Animation
     }
 
 
@@ -133,6 +157,7 @@ init engineArgs _ =
             { stats = stats
             , health = Meter.create (toFloat stats.maxHealth)
             , energy = Meter.create (toFloat stats.maxEnergy)
+            , spriteAnimation = Nothing
             }
 
         initialSelectionList =
@@ -140,10 +165,12 @@ init engineArgs _ =
                 |> List.map createAlly
                 |> SelectionList.create
 
+        initialEnemy : Enemy
         initialEnemy =
             { stats = engineArgs.initialEnemy
             , health = Meter.create (toFloat engineArgs.initialEnemy.maxHealth)
             , energy = Meter.create (toFloat engineArgs.initialEnemy.maxEnergy)
+            , spriteAnimation = Nothing
             }
     in
     ( { party = initialSelectionList, enemy = initialEnemy }, Cmd.none )
@@ -237,21 +264,43 @@ handleEnemyAttack delta model =
             removeHealth =
                 SelectionList.map (removeAllyHealth (toFloat enemy.stats.damage))
 
-            newModel =
-                model
-                    |> updateParty removeHealth
-                    |> updateEnemy drainEnergy
-                    |> updateEnemy (updateEnemyEnergy delta)
+            addShake : Party -> Party
+            addShake =
+                SelectionList.map
+                    (\ally ->
+                        { ally
+                            | spriteAnimation =
+                                Just
+                                    { animationType = Shake
+                                    , meter =
+                                        Meter.createEmpty 6
+                                    }
+                        }
+                    )
         in
-        newModel
+        model
+            |> updateParty removeHealth
+            |> updateParty addShake
+            |> updateEnemy drainEnergy
+            |> updateEnemy (updateEnemyEnergy delta)
 
     else
-        let
-            newModel =
-                model
-                    |> updateEnemy (updateEnemyEnergy delta)
-        in
-        newModel
+        model
+            |> updateEnemy (updateEnemyEnergy delta)
+
+
+updateAnimation : Float -> Animation -> Maybe Animation
+updateAnimation delta animation =
+    if Meter.isFull animation.meter then
+        Nothing
+
+    else
+        Just { animation | meter = Meter.handleAnimationFrame delta animation.meter }
+
+
+updateAllySpriteAnimation : (Maybe Animation -> Maybe Animation) -> Ally -> Ally
+updateAllySpriteAnimation fn ally =
+    { ally | spriteAnimation = fn ally.spriteAnimation }
 
 
 update : EngineArgs -> Msg -> Model -> ( Model, Cmd Msg )
@@ -385,19 +434,30 @@ update engineArgs msg model =
 
         HandleAnimationFrame delta ->
             let
-                updateAllyEnergy : Ally -> Ally
-                updateAllyEnergy ally =
-                    { ally | energy = Meter.handleAnimationFrame delta ally.energy }
+                updateAllyAnimations : Party -> Party
+                updateAllyAnimations =
+                    SelectionList.map
+                        (\ally ->
+                            let
+                                newAnimation =
+                                    ally.spriteAnimation
+                                        |> Maybe.andThen (updateAnimation delta)
+                            in
+                            { ally | spriteAnimation = newAnimation }
+                        )
 
                 updateAllyEnergies : Party -> Party
-                updateAllyEnergies party =
-                    party
-                        |> SelectionList.map updateAllyEnergy
+                updateAllyEnergies =
+                    SelectionList.map
+                        (\ally ->
+                            { ally | energy = Meter.handleAnimationFrame delta ally.energy }
+                        )
 
                 newModel =
                     model
                         |> updateParty updateAllyEnergies
                         |> handleEnemyAttack delta
+                        |> updateParty updateAllyAnimations
             in
             ( newModel, Cmd.none )
 
@@ -543,7 +603,7 @@ renderTop model =
 
                 allyImage =
                     div [ class "relative" ]
-                        [ img [ class "w-24 h-24", src battleUrl ] []
+                        [ img [ class "w-24 h-24", class (classForAnimation ally.spriteAnimation), src battleUrl ] []
                         , if isSelected then
                             img [ class "absolute inline-block w-24 h-24 top-0 left-0", src images.battleSelection ] []
 
