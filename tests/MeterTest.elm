@@ -15,6 +15,6 @@ suite =
                         |> Meter.drain
                         |> Meter.handleAnimationFrame 10.0
                         |> Meter.getCurrent
-                        |> Expect.equal 10.0
+                        |> Expect.within (Expect.Absolute 0.000001) 0.1
             ]
         ]

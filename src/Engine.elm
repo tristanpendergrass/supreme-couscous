@@ -8,6 +8,7 @@ import Html.Events exposing (onClick)
 import Json.Decode as Decode
 import List.Extra
 import Meter exposing (Meter)
+import Random
 import SelectionList exposing (SelectionList)
 import Utils
 
@@ -144,7 +145,8 @@ type alias Enemy =
 
 
 type alias Model =
-    { party : Party
+    { seed : Random.Seed
+    , party : Party
     , enemy : Enemy
     }
 
@@ -169,11 +171,16 @@ init engineArgs _ =
         initialEnemy =
             { stats = engineArgs.initialEnemy
             , health = Meter.create (toFloat engineArgs.initialEnemy.maxHealth)
-            , energy = Meter.create (toFloat engineArgs.initialEnemy.maxEnergy)
+            , energy = Meter.create (toFloat engineArgs.initialEnemy.maxEnergy) |> Meter.drain
             , spriteAnimation = Nothing
             }
     in
-    ( { party = initialSelectionList, enemy = initialEnemy }, Cmd.none )
+    ( { seed = Random.initialSeed 0
+      , party = initialSelectionList
+      , enemy = initialEnemy
+      }
+    , Cmd.none
+    )
 
 
 

@@ -5,6 +5,8 @@ module SelectionList exposing
     , getAt
     , getSelected
     , map
+    , mapNthMember
+    , mapRandomMember
     , mapSelection
     , mapToList
     , select
@@ -12,6 +14,7 @@ module SelectionList exposing
     )
 
 import List.Extra
+import Random
 
 
 {-| List of values of type a, with one of them optionally selected. If selected, data of type t is attached to the selected item.
@@ -120,3 +123,73 @@ map mapFn (SelectionList first maybeEl second) =
                 |> Maybe.andThen (\( el, data ) -> Just ( mapFn el, data ))
     in
     SelectionList newFirst newEl newSecond
+
+
+
+-- getRandomIndex : a -> SelectionList a t -> Random.Generator (Maybe Int)
+-- getRandomIndex selectionList =
+--     let
+--         lower =
+--             0
+--         higher =
+--             selectionList
+--                 |> toList
+--                 |> List.length
+--                 |> (+) 1
+--     in
+--     Random.int lower higher
+
+
+mapNthMember : (a -> a) -> Int -> SelectionList a t -> Result String (SelectionList a t)
+mapNthMember mapFn index (SelectionList first maybeEl second) =
+    case maybeEl of
+        Nothing ->
+            if index < 0 then
+                Err "Index not in range"
+
+            else if index < List.length first then
+                Ok (SelectionList (List.Extra.updateAt index mapFn first) maybeEl second)
+
+            else if index < List.length first + List.length second then
+                Ok (SelectionList first maybeEl (List.Extra.updateAt (List.length first + index) mapFn second))
+
+            else
+                Err "Index not in range"
+
+        Just ( el, data ) ->
+            if index < 0 then
+                Err "Index not in range"
+
+            else if index < List.length first then
+                Ok (SelectionList (List.Extra.updateAt index mapFn first) maybeEl second)
+
+            else if index == List.length first then
+                Ok (SelectionList first (Just ( mapFn el, data )) second)
+
+            else if index < List.length first + List.length second then
+                Ok (SelectionList first maybeEl (List.Extra.updateAt (List.length first + index) mapFn second))
+
+            else
+                Err "Index not in range"
+
+
+mapRandomMember : (a -> a) -> SelectionList a t -> Random.Generator (SelectionList a t)
+mapRandomMember mapFn selectionList =
+    case selectionList of
+        SelectionList [] Nothing [] ->
+            Random.constant selectionList
+
+        SelectionList _ _ _ ->
+            let
+                upperBound =
+                    selectionList
+                        |> toList
+                        |> List.length
+
+                indexGenerator : Random.Generator Int
+                indexGenerator =
+                    Random.int 0 upperBound
+            in
+            indexGenerator
+                |> Random.map (\index -> mapNthMember mapFn index selectionList)
+                |> Random.map (Result.withDefault selectionList)
