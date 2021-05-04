@@ -1,5 +1,6 @@
 port module Engine exposing (EngineArgAlly, EngineArgEnemy, EngineArgMove, Instance, create, damage)
 
+import Animation exposing (Animation)
 import Browser
 import Browser.Events
 import Html exposing (Html, button, div, img, text)
@@ -100,28 +101,6 @@ type alias Selection =
 addInputToSelection : Input -> Selection -> Selection
 addInputToSelection input selection =
     { selection | liveInputs = input :: selection.liveInputs }
-
-
-classForAnimation : Maybe Animation -> String
-classForAnimation animation =
-    case animation of
-        Nothing ->
-            ""
-
-        Just { animationType } ->
-            case animationType of
-                Shake ->
-                    "animate-shake"
-
-
-type AnimationType
-    = Shake
-
-
-type alias Animation =
-    { animationType : AnimationType
-    , meter : Meter
-    }
 
 
 type alias Ally =
@@ -273,14 +252,7 @@ handleEnemyAttack delta model =
 
             addShake : Ally -> Ally
             addShake ally =
-                { ally
-                    | spriteAnimation =
-                        Just
-                            { animationType = Shake
-                            , meter =
-                                Meter.createEmpty 6
-                            }
-                }
+                { ally | spriteAnimation = Just (Animation.create Animation.Shake) }
 
             mapAlly : Ally -> Ally
             mapAlly =
@@ -302,15 +274,6 @@ handleEnemyAttack delta model =
     else
         model
             |> updateEnemy (updateEnemyEnergy delta)
-
-
-updateAnimation : Float -> Animation -> Maybe Animation
-updateAnimation delta animation =
-    if Meter.isFull animation.meter then
-        Nothing
-
-    else
-        Just { animation | meter = Meter.handleAnimationFrame delta animation.meter }
 
 
 updateAllySpriteAnimation : (Maybe Animation -> Maybe Animation) -> Ally -> Ally
@@ -456,7 +419,7 @@ update engineArgs msg model =
                             let
                                 newAnimation =
                                     ally.spriteAnimation
-                                        |> Maybe.andThen (updateAnimation delta)
+                                        |> Maybe.andThen (Animation.updateAnimation delta)
                             in
                             { ally | spriteAnimation = newAnimation }
                         )
@@ -618,7 +581,7 @@ renderTop model =
 
                 allyImage =
                     div [ class "relative" ]
-                        [ img [ class "w-24 h-24", class (classForAnimation ally.spriteAnimation), src battleUrl ] []
+                        [ img [ class "w-24 h-24", class (Animation.classForAnimation ally.spriteAnimation), src battleUrl ] []
                         , if isSelected then
                             img [ class "absolute inline-block w-24 h-24 top-0 left-0", src images.battleSelection ] []
 
