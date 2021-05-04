@@ -276,16 +276,6 @@ handleEnemyAttack delta model =
             |> updateEnemy (updateEnemyEnergy delta)
 
 
-updateAllySpriteAnimation : Float -> Ally -> Ally
-updateAllySpriteAnimation delta ally =
-    let
-        newAnimation =
-            ally.spriteAnimation
-                |> Maybe.andThen (Animation.updateAnimation delta)
-    in
-    { ally | spriteAnimation = newAnimation }
-
-
 update : EngineArgs -> Msg -> Model -> ( Model, Cmd Msg )
 update engineArgs msg model =
     let
@@ -412,15 +402,12 @@ update engineArgs msg model =
                                 |> applyOnSuccess
                                 |> updateParty updateEnergy
                                 |> updateParty SelectionList.clearSelection
+                                |> updateEnemy (\enemy -> { enemy | spriteAnimation = Just <| Animation.create Animation.Shake })
                     in
                     ( newModel, emitSound sounds.attack )
 
         HandleAnimationFrame delta ->
             let
-                updateAllyAnimations : Party -> Party
-                updateAllyAnimations =
-                    SelectionList.map (updateAllySpriteAnimation delta)
-
                 updateAllyEnergies : Party -> Party
                 updateAllyEnergies =
                     SelectionList.map
@@ -428,11 +415,25 @@ update engineArgs msg model =
                             { ally | energy = Meter.handleAnimationFrame delta ally.energy }
                         )
 
+                updateAnimation : { a | spriteAnimation : Maybe Animation } -> { a | spriteAnimation : Maybe Animation }
+                updateAnimation obj =
+                    let
+                        newAnimation =
+                            obj.spriteAnimation
+                                |> Maybe.andThen (Animation.updateAnimation delta)
+                    in
+                    { obj | spriteAnimation = newAnimation }
+
+                updateAllies : (Ally -> Ally) -> Model -> Model
+                updateAllies fn =
+                    updateParty (SelectionList.map fn)
+
                 newModel =
                     model
                         |> updateParty updateAllyEnergies
                         |> handleEnemyAttack delta
-                        |> updateParty updateAllyAnimations
+                        |> updateAllies updateAnimation
+                        |> updateEnemy updateAnimation
             in
             ( newModel, Cmd.none )
 
