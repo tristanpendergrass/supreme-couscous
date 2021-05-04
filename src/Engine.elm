@@ -267,27 +267,35 @@ handleEnemyAttack delta model =
             removeAllyHealth amount ally =
                 { ally | health = Meter.subtract amount ally.health }
 
-            removeHealth : Party -> Party
+            removeHealth : Ally -> Ally
             removeHealth =
-                SelectionList.map (removeAllyHealth (toFloat enemy.stats.damage))
+                removeAllyHealth (toFloat enemy.stats.damage)
 
-            addShake : Party -> Party
-            addShake =
-                SelectionList.map
-                    (\ally ->
-                        { ally
-                            | spriteAnimation =
-                                Just
-                                    { animationType = Shake
-                                    , meter =
-                                        Meter.createEmpty 6
-                                    }
-                        }
-                    )
+            addShake : Ally -> Ally
+            addShake ally =
+                { ally
+                    | spriteAnimation =
+                        Just
+                            { animationType = Shake
+                            , meter =
+                                Meter.createEmpty 6
+                            }
+                }
+
+            mapAlly : Ally -> Ally
+            mapAlly =
+                removeHealth >> addShake
+
+            handleAlly : Model -> Model
+            handleAlly oldModel =
+                let
+                    ( newParty, newSeed ) =
+                        Random.step (SelectionList.mapRandomMember mapAlly oldModel.party) oldModel.seed
+                in
+                { oldModel | seed = newSeed, party = newParty }
         in
         model
-            |> updateParty removeHealth
-            |> updateParty addShake
+            |> handleAlly
             |> updateEnemy drainEnergy
             |> updateEnemy (updateEnemyEnergy delta)
 
