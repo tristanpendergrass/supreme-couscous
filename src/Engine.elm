@@ -276,9 +276,14 @@ handleEnemyAttack delta model =
             |> updateEnemy (updateEnemyEnergy delta)
 
 
-updateAllySpriteAnimation : (Maybe Animation -> Maybe Animation) -> Ally -> Ally
-updateAllySpriteAnimation fn ally =
-    { ally | spriteAnimation = fn ally.spriteAnimation }
+updateAllySpriteAnimation : Float -> Ally -> Ally
+updateAllySpriteAnimation delta ally =
+    let
+        newAnimation =
+            ally.spriteAnimation
+                |> Maybe.andThen (Animation.updateAnimation delta)
+    in
+    { ally | spriteAnimation = newAnimation }
 
 
 update : EngineArgs -> Msg -> Model -> ( Model, Cmd Msg )
@@ -414,15 +419,7 @@ update engineArgs msg model =
             let
                 updateAllyAnimations : Party -> Party
                 updateAllyAnimations =
-                    SelectionList.map
-                        (\ally ->
-                            let
-                                newAnimation =
-                                    ally.spriteAnimation
-                                        |> Maybe.andThen (Animation.updateAnimation delta)
-                            in
-                            { ally | spriteAnimation = newAnimation }
-                        )
+                    SelectionList.map (updateAllySpriteAnimation delta)
 
                 updateAllyEnergies : Party -> Party
                 updateAllyEnergies =
@@ -629,7 +626,7 @@ renderTop model =
         renderEnemy enemy =
             div [ class "border border-dashed border-red-500 h-full w-96" ]
                 [ div [ class "w-full h-full flex items-center justify-center flex-col space-y-2" ]
-                    [ img [ class "inline-block h-48", src enemy.stats.battleUrl ] []
+                    [ img [ class "inline-block h-48", class <| Animation.classForAnimation enemy.spriteAnimation, src enemy.stats.battleUrl ] []
                     , enemy.health
                         |> Meter.setDisplaySize 150
                         |> Meter.renderHorizontal
