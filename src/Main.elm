@@ -1,14 +1,15 @@
 module Main exposing (main)
 
+import Ally
 import Engine
 
 
-allyOne : Engine.EngineArgAlly
+allyOne : Ally.Stats
 allyOne =
     { avatarUrl = "thief_portrait.png"
     , battleUrl = "thief.png"
     , move =
-        { onSuccess = [ Engine.damage 10 ]
+        { onSuccess = [ Ally.damage 10 ]
         , prompt = "A quick jab, followed by a slash..."
         , inputs =
             [ ( 'j', "Jab" )
@@ -20,12 +21,12 @@ allyOne =
     }
 
 
-allyTwo : Engine.EngineArgAlly
+allyTwo : Ally.Stats
 allyTwo =
     { avatarUrl = "knight_portrait.png"
     , battleUrl = "knight.png"
     , move =
-        { onSuccess = [ Engine.damage 5 ]
+        { onSuccess = [ Ally.damage 5 ]
         , prompt = "Analyze the opponent's weak spots and then strike twice..."
         , inputs =
             [ ( 'a', "Analyze" )
@@ -38,12 +39,12 @@ allyTwo =
     }
 
 
-allyThree : Engine.EngineArgAlly
+allyThree : Ally.Stats
 allyThree =
     { avatarUrl = "priest_portrait.png"
     , battleUrl = "priest.png"
     , move =
-        { onSuccess = [ Engine.damage 20 ]
+        { onSuccess = [ Ally.damage 20 ]
         , prompt = "Focus, determination, and then yell 'hoody hoo!'..."
         , inputs =
             [ ( 'f', "Focus" )

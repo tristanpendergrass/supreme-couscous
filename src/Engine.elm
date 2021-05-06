@@ -1,5 +1,6 @@
-port module Engine exposing (EngineArgAlly, EngineArgEnemy, EngineArgMove, Instance, create, damage)
+port module Engine exposing (EngineArgEnemy, Instance, create)
 
+import Ally exposing (Ally)
 import Animation exposing (Animation)
 import Browser
 import Browser.Events
@@ -44,26 +45,6 @@ type alias Input =
     ( Char, String )
 
 
-type EngineArgEffect
-    = Damage Int
-
-
-type alias EngineArgMove =
-    { onSuccess : List EngineArgEffect
-    , prompt : String
-    , inputs : List Input
-    }
-
-
-type alias EngineArgAlly =
-    { avatarUrl : String
-    , battleUrl : String
-    , move : EngineArgMove
-    , maxHealth : Int
-    , maxEnergy : Int
-    }
-
-
 type alias EngineArgEnemy =
     { battleUrl : String
     , maxHealth : Int
@@ -74,7 +55,7 @@ type alias EngineArgEnemy =
 
 type alias EngineArgs =
     { title : String
-    , initialParty : List EngineArgAlly
+    , initialParty : List Ally.Stats
     , initialEnemy : EngineArgEnemy
     }
 
@@ -88,22 +69,9 @@ create engineArgs =
 -- MODEL
 
 
-damage : Int -> EngineArgEffect
-damage =
-    Damage
-
-
 addInputToSelection : Input -> Selection -> Selection
 addInputToSelection input selection =
     { selection | liveInputs = input :: selection.liveInputs }
-
-
-type alias Ally =
-    { stats : EngineArgAlly
-    , health : Meter
-    , energy : Meter
-    , spriteAnimation : Maybe Animation
-    }
 
 
 type alias Enemy =
@@ -124,7 +92,7 @@ type alias Model =
 init : EngineArgs -> () -> ( Model, Cmd Msg )
 init engineArgs _ =
     let
-        createAlly : EngineArgAlly -> Ally
+        createAlly : Ally.Stats -> Ally
         createAlly stats =
             { stats = stats
             , health = Meter.create (toFloat stats.maxHealth)
@@ -367,10 +335,10 @@ update engineArgs msg model =
                                 effects =
                                     selectedAlly.stats.move.onSuccess
 
-                                applyEffect : EngineArgEffect -> Model -> Model
+                                applyEffect : Ally.Effect -> Model -> Model
                                 applyEffect effect m =
                                     case effect of
-                                        Damage amount ->
+                                        Ally.Damage amount ->
                                             dealDamageToEnemy amount m
                             in
                             List.foldl applyEffect oldModel effects
@@ -667,7 +635,7 @@ renderBottom model =
                 , div [ class inputLabel ] [ text name ]
                 ]
 
-        renderFinish : EngineArgMove -> Html Msg
+        renderFinish : Ally.Move -> Html Msg
         renderFinish _ =
             button [ class inputContainer, onClick Finish ]
                 [ div [ class inputTrigger ] [ text "Enter" ]
