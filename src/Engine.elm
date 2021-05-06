@@ -9,7 +9,7 @@ import Html.Events exposing (onClick)
 import Json.Decode as Decode
 import List.Extra
 import Meter exposing (Meter)
-import Party exposing (Party)
+import Party exposing (Party, Selection)
 import Random
 import Utils
 
@@ -93,11 +93,6 @@ damage =
     Damage
 
 
-type alias Selection =
-    { liveInputs : List Input
-    }
-
-
 addInputToSelection : Input -> Selection -> Selection
 addInputToSelection input selection =
     { selection | liveInputs = input :: selection.liveInputs }
@@ -121,7 +116,7 @@ type alias Enemy =
 
 type alias Model =
     { seed : Random.Seed
-    , party : Party Ally Selection
+    , party : Party Ally
     , enemy : Enemy
     }
 
@@ -173,7 +168,7 @@ type Msg
     | HandleAnimationFrame Float
 
 
-updateParty : (Party Ally Selection -> Party Ally Selection) -> Model -> Model
+updateParty : (Party Ally -> Party Ally) -> Model -> Model
 updateParty updateFn model =
     { model | party = updateFn model.party }
 
@@ -304,7 +299,7 @@ update engineArgs msg model =
                     in
                     if allyHasEnergy then
                         let
-                            updatePosition : Party Ally Selection -> Party Ally Selection
+                            updatePosition : Party Ally -> Party Ally
                             updatePosition party =
                                 if allyHasEnergy then
                                     Party.select position { liveInputs = [] } party
@@ -384,7 +379,7 @@ update engineArgs msg model =
                         drainMeter ally =
                             { ally | energy = Meter.drain ally.energy }
 
-                        updateEnergy : Party Ally Selection -> Party Ally Selection
+                        updateEnergy : Party Ally -> Party Ally
                         updateEnergy party =
                             party
                                 |> Party.mapSelection
@@ -404,7 +399,7 @@ update engineArgs msg model =
 
         HandleAnimationFrame delta ->
             let
-                updateAllyEnergies : Party Ally Selection -> Party Ally Selection
+                updateAllyEnergies : Party Ally -> Party Ally
                 updateAllyEnergies =
                     Party.map
                         (\ally ->
@@ -639,7 +634,7 @@ renderTop model =
 renderBottom : Model -> Html Msg
 renderBottom model =
     let
-        renderPortrait : Party Ally Selection -> Html Msg
+        renderPortrait : Party Ally -> Html Msg
         renderPortrait party =
             div [ class "overflow-hidden w-48 h-48 relative" ]
                 [ case Party.getSelected party of
@@ -650,7 +645,7 @@ renderBottom model =
                         div [] []
                 ]
 
-        renderPrompt : Party Ally Selection -> Html Msg
+        renderPrompt : Party Ally -> Html Msg
         renderPrompt party =
             div [ class "w-64 h-48" ]
                 [ case Party.getSelected party of
@@ -679,7 +674,7 @@ renderBottom model =
                 , div [ class inputLabel ] [ text "Finish" ]
                 ]
 
-        renderMove : Party Ally Selection -> Html Msg
+        renderMove : Party Ally -> Html Msg
         renderMove party =
             div [ class "w-96 h-48 " ]
                 [ case Party.getSelected party of
@@ -702,7 +697,7 @@ renderBottom model =
         renderLiveInput ( _, move ) =
             div [] [ text move ]
 
-        renderInputs : Party Ally Selection -> Html Msg
+        renderInputs : Party Ally -> Html Msg
         renderInputs party =
             case Party.getSelected party of
                 Just ( _, { liveInputs } ) ->

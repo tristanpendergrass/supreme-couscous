@@ -1,9 +1,23 @@
 module PartyTest exposing (..)
 
 import Expect exposing (Expectation)
-import Party exposing (Party)
+import Party exposing (Party, Selection)
 import Random
 import Test exposing (Test, describe, test)
+
+
+type alias Input =
+    ( Char, String )
+
+
+selection : Selection
+selection =
+    { liveInputs = [] }
+
+
+selectionWithInput : Selection
+selectionWithInput =
+    { liveInputs = [ ( 'a', "foo" ) ] }
 
 
 zeroGenerator : Random.Generator Int
@@ -15,20 +29,20 @@ toZ _ =
     'z'
 
 
-baseList : Party Char String
+baseList : Party Char
 baseList =
     Party.create [ 'a', 'b', 'c' ]
 
 
-emptyList : Party Char String
+emptyList : Party Char
 emptyList =
     Party.create []
 
 
-selectedList : Party Char String
+selectedList : Party Char
 selectedList =
     baseList
-        |> Party.select 1 "data"
+        |> Party.select 1 selection
         |> Result.withDefault baseList
 
 
@@ -46,25 +60,25 @@ suite =
             [ test "can select an element in range" <|
                 \_ ->
                     baseList
-                        |> Party.select 0 "data"
+                        |> Party.select 0 selection
                         |> Result.map Party.getSelected
-                        |> Expect.equal (Ok (Just ( 'a', "data" )))
+                        |> Expect.equal (Ok (Just ( 'a', selection )))
             , test "item order is the same after selecting" <|
                 \_ ->
                     baseList
-                        |> Party.select 0 "data"
+                        |> Party.select 0 selection
                         |> Result.map Party.toList
                         |> Expect.equal (Ok [ 'a', 'b', 'c' ])
             , test "list is the same after selecting the last element" <|
                 \_ ->
                     baseList
-                        |> Party.select 2 "data"
+                        |> Party.select 2 selection
                         |> Result.map Party.toList
                         |> Expect.equal (Ok [ 'a', 'b', 'c' ])
             , test "returns an Err if trying to select out of range" <|
                 \_ ->
                     baseList
-                        |> Party.select 3 "data"
+                        |> Party.select 3 selection
                         |> Result.map Party.getSelected
                         |> Expect.err
             ]
@@ -73,12 +87,12 @@ suite =
                 \_ ->
                     let
                         toBar ( item, _ ) =
-                            ( item, "bar" )
+                            ( item, selectionWithInput )
                     in
                     selectedList
                         |> Party.mapSelection toBar
                         |> Result.map Party.getSelected
-                        |> Expect.equal (Ok (Just ( 'b', "bar" )))
+                        |> Expect.equal (Ok (Just ( 'b', selectionWithInput )))
             ]
         , describe "mapNthMember"
             [ test "returns Err if index is out of range" <|
@@ -96,7 +110,7 @@ suite =
                     let
                         expectedList =
                             selectedList
-                                |> Party.mapSelection (\_ -> ( 'z', "data" ))
+                                |> Party.mapSelection (\_ -> ( 'z', selection ))
                                 |> Result.withDefault (Party.create [ 'a', 'b', 'z' ])
                     in
                     selectedList
