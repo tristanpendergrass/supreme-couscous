@@ -84,7 +84,7 @@ type alias Enemy =
 
 type alias Model =
     { seed : Random.Seed
-    , party : Party Ally
+    , party : Party
     , enemy : Enemy
     }
 
@@ -92,17 +92,9 @@ type alias Model =
 init : EngineArgs -> () -> ( Model, Cmd Msg )
 init engineArgs _ =
     let
-        createAlly : Ally.Stats -> Ally
-        createAlly stats =
-            { stats = stats
-            , health = Meter.create (toFloat stats.maxHealth)
-            , energy = Meter.create (toFloat stats.maxEnergy)
-            , spriteAnimation = Nothing
-            }
-
         initialParty =
             engineArgs.initialParty
-                |> List.map createAlly
+                |> List.map Ally.create
                 |> Party.create
 
         initialEnemy : Enemy
@@ -136,9 +128,18 @@ type Msg
     | HandleAnimationFrame Float
 
 
-updateParty : (Party Ally -> Party Ally) -> Model -> Model
+updateParty : (Party -> Party) -> Model -> Model
 updateParty updateFn model =
     { model | party = updateFn model.party }
+
+
+updateRandomAlly : (Ally -> Ally) -> Model -> Model
+updateRandomAlly updateFn oldModel =
+    let
+        ( newParty, newSeed ) =
+            Random.step (Party.mapRandomMember updateFn oldModel.party) oldModel.seed
+    in
+    { oldModel | seed = newSeed, party = newParty }
 
 
 getCompletedAlly : Model -> Maybe Ally
@@ -152,16 +153,6 @@ getCompletedAlly model =
                 else
                     Nothing
             )
-
-
-isPatternComplete : Model -> Bool
-isPatternComplete model =
-    case getCompletedAlly model of
-        Just _ ->
-            True
-
-        Nothing ->
-            False
 
 
 dealDamageToEnemy : Int -> Model -> Model
@@ -202,31 +193,12 @@ handleEnemyAttack delta model =
             drainEnergy oldEnemy =
                 { enemy | energy = Meter.drain oldEnemy.energy }
 
-            removeAllyHealth amount ally =
-                { ally | health = Meter.subtract amount ally.health }
-
-            removeHealth : Ally -> Ally
-            removeHealth =
-                removeAllyHealth (toFloat enemy.stats.damage)
-
-            addShake : Ally -> Ally
-            addShake ally =
-                { ally | spriteAnimation = Just (Animation.create Animation.Shake) }
-
-            mapAlly : Ally -> Ally
-            mapAlly =
-                removeHealth >> addShake
-
-            handleAlly : Model -> Model
-            handleAlly oldModel =
-                let
-                    ( newParty, newSeed ) =
-                        Random.step (Party.mapRandomMember mapAlly oldModel.party) oldModel.seed
-                in
-                { oldModel | seed = newSeed, party = newParty }
+            updateAlly : Ally -> Ally
+            updateAlly =
+                Ally.removeHealth (toFloat enemy.stats.damage) >> Ally.addShake
         in
         model
-            |> handleAlly
+            |> updateRandomAlly updateAlly
             |> updateEnemy drainEnergy
             |> updateEnemy (updateEnemyEnergy delta)
 
@@ -267,7 +239,7 @@ update engineArgs msg model =
                     in
                     if allyHasEnergy then
                         let
-                            updatePosition : Party Ally -> Party Ally
+                            updatePosition : Party -> Party
                             updatePosition party =
                                 if allyHasEnergy then
                                     Party.select position { liveInputs = [] } party
@@ -347,7 +319,7 @@ update engineArgs msg model =
                         drainMeter ally =
                             { ally | energy = Meter.drain ally.energy }
 
-                        updateEnergy : Party Ally -> Party Ally
+                        updateEnergy : Party -> Party
                         updateEnergy party =
                             party
                                 |> Party.mapSelection
@@ -367,13 +339,6 @@ update engineArgs msg model =
 
         HandleAnimationFrame delta ->
             let
-                updateAllyEnergies : Party Ally -> Party Ally
-                updateAllyEnergies =
-                    Party.map
-                        (\ally ->
-                            { ally | energy = Meter.handleAnimationFrame delta ally.energy }
-                        )
-
                 updateAnimation : { a | spriteAnimation : Maybe Animation } -> { a | spriteAnimation : Maybe Animation }
                 updateAnimation obj =
                     let
@@ -383,15 +348,10 @@ update engineArgs msg model =
                     in
                     { obj | spriteAnimation = newAnimation }
 
-                updateAllies : (Ally -> Ally) -> Model -> Model
-                updateAllies fn =
-                    updateParty (Party.map fn)
-
                 newModel =
                     model
-                        |> updateParty updateAllyEnergies
+                        |> updateParty (Party.handleAnimationFrame delta)
                         |> handleEnemyAttack delta
-                        |> updateAllies updateAnimation
                         |> updateEnemy updateAnimation
             in
             ( newModel, Cmd.none )
@@ -602,7 +562,7 @@ renderTop model =
 renderBottom : Model -> Html Msg
 renderBottom model =
     let
-        renderPortrait : Party Ally -> Html Msg
+        renderPortrait : Party -> Html Msg
         renderPortrait party =
             div [ class "overflow-hidden w-48 h-48 relative" ]
                 [ case Party.getSelected party of
@@ -613,7 +573,7 @@ renderBottom model =
                         div [] []
                 ]
 
-        renderPrompt : Party Ally -> Html Msg
+        renderPrompt : Party -> Html Msg
         renderPrompt party =
             div [ class "w-64 h-48" ]
                 [ case Party.getSelected party of
@@ -642,7 +602,7 @@ renderBottom model =
                 , div [ class inputLabel ] [ text "Finish" ]
                 ]
 
-        renderMove : Party Ally -> Html Msg
+        renderMove : Party -> Html Msg
         renderMove party =
             div [ class "w-96 h-48 " ]
                 [ case Party.getSelected party of
@@ -665,7 +625,7 @@ renderBottom model =
         renderLiveInput ( _, move ) =
             div [] [ text move ]
 
-        renderInputs : Party Ally -> Html Msg
+        renderInputs : Party -> Html Msg
         renderInputs party =
             case Party.getSelected party of
                 Just ( _, { liveInputs } ) ->

@@ -5,6 +5,7 @@ module Party exposing
     , create
     , getAt
     , getSelected
+    , handleAnimationFrame
     , map
     , mapNthMember
     , mapRandomMember
@@ -14,7 +15,9 @@ module Party exposing
     , toList
     )
 
+import Ally exposing (Ally)
 import List.Extra
+import Meter exposing (Meter)
 import Random
 
 
@@ -29,16 +32,16 @@ type alias Selection =
 
 {-| List of values of type a, with one of them optionally selected. If selected, data of type t is attached to the selected item.
 -}
-type Party a
-    = SelectionList (List a) (Maybe ( a, Selection )) (List a)
+type Party
+    = SelectionList (List Ally) (Maybe ( Ally, Selection )) (List Ally)
 
 
-create : List a -> Party a
+create : List Ally -> Party
 create initial =
     SelectionList initial Nothing []
 
 
-toList : Party a -> List a
+toList : Party -> List Ally
 toList (SelectionList first maybeEl second) =
     case maybeEl of
         Nothing ->
@@ -48,22 +51,22 @@ toList (SelectionList first maybeEl second) =
             List.concat [ first, [ el ], second ]
 
 
-getSelected : Party a -> Maybe ( a, Selection )
+getSelected : Party -> Maybe ( Ally, Selection )
 getSelected (SelectionList _ el _) =
     el
 
 
-clearSelection : Party a -> Party a
+clearSelection : Party -> Party
 clearSelection =
     toList >> create
 
 
-getAt : Int -> Party a -> Maybe a
+getAt : Int -> Party -> Maybe Ally
 getAt position =
     toList >> List.Extra.getAt position
 
 
-select : Int -> Selection -> Party a -> Result String (Party a)
+select : Int -> Selection -> Party -> Result String Party
 select position data oldList =
     let
         list =
@@ -79,7 +82,7 @@ select position data oldList =
             Result.Ok (SelectionList (List.take position list) (Just ( selected, data )) (List.drop (position + 1) list))
 
 
-mapSelection : (( a, Selection ) -> ( a, Selection )) -> Party a -> Result String (Party a)
+mapSelection : (( Ally, Selection ) -> ( Ally, Selection )) -> Party -> Result String Party
 mapSelection mapFn (SelectionList first maybeEl second) =
     case maybeEl of
         Nothing ->
@@ -93,7 +96,7 @@ mapSelection mapFn (SelectionList first maybeEl second) =
             Ok <| SelectionList first newEl second
 
 
-mapToList : (Bool -> Int -> a -> b) -> Party a -> List b
+mapToList : (Bool -> Int -> Ally -> a) -> Party -> List a
 mapToList mapFn (SelectionList first maybeEl second) =
     let
         selectionList =
@@ -119,7 +122,7 @@ mapToList mapFn (SelectionList first maybeEl second) =
                 (toList selectionList)
 
 
-map : (a -> b) -> Party a -> Party b
+map : (Ally -> Ally) -> Party -> Party
 map mapFn (SelectionList first maybeEl second) =
     let
         newFirst =
@@ -150,7 +153,7 @@ map mapFn (SelectionList first maybeEl second) =
 --     Random.int lower higher
 
 
-mapNthMember : (a -> a) -> Int -> Party a -> Result String (Party a)
+mapNthMember : (Ally -> Ally) -> Int -> Party -> Result String Party
 mapNthMember mapFn index (SelectionList first maybeEl second) =
     case maybeEl of
         Nothing ->
@@ -183,7 +186,7 @@ mapNthMember mapFn index (SelectionList first maybeEl second) =
                 Err "Index not in range"
 
 
-mapRandomMember : (a -> a) -> Party a -> Random.Generator (Party a)
+mapRandomMember : (Ally -> Ally) -> Party -> Random.Generator Party
 mapRandomMember mapFn selectionList =
     case selectionList of
         SelectionList [] Nothing [] ->
@@ -203,3 +206,8 @@ mapRandomMember mapFn selectionList =
             indexGenerator
                 |> Random.map (\index -> mapNthMember mapFn index selectionList)
                 |> Random.map (Result.withDefault selectionList)
+
+
+handleAnimationFrame : Float -> Party -> Party
+handleAnimationFrame delta =
+    map (Ally.handleAnimationFrame delta)
