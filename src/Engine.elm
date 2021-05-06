@@ -9,8 +9,8 @@ import Html.Events exposing (onClick)
 import Json.Decode as Decode
 import List.Extra
 import Meter exposing (Meter)
+import Party exposing (Party)
 import Random
-import SelectionList exposing (SelectionList)
 import Utils
 
 
@@ -111,10 +111,6 @@ type alias Ally =
     }
 
 
-type alias Party =
-    SelectionList Ally Selection
-
-
 type alias Enemy =
     { stats : EngineArgEnemy
     , health : Meter
@@ -125,7 +121,7 @@ type alias Enemy =
 
 type alias Model =
     { seed : Random.Seed
-    , party : Party
+    , party : Party Ally Selection
     , enemy : Enemy
     }
 
@@ -141,10 +137,10 @@ init engineArgs _ =
             , spriteAnimation = Nothing
             }
 
-        initialSelectionList =
+        initialParty =
             engineArgs.initialParty
                 |> List.map createAlly
-                |> SelectionList.create
+                |> Party.create
 
         initialEnemy : Enemy
         initialEnemy =
@@ -155,7 +151,7 @@ init engineArgs _ =
             }
     in
     ( { seed = Random.initialSeed 0
-      , party = initialSelectionList
+      , party = initialParty
       , enemy = initialEnemy
       }
     , Cmd.none
@@ -177,14 +173,14 @@ type Msg
     | HandleAnimationFrame Float
 
 
-updateParty : (Party -> Party) -> Model -> Model
+updateParty : (Party Ally Selection -> Party Ally Selection) -> Model -> Model
 updateParty updateFn model =
     { model | party = updateFn model.party }
 
 
 getCompletedAlly : Model -> Maybe Ally
 getCompletedAlly model =
-    SelectionList.getSelected model.party
+    Party.getSelected model.party
         |> Maybe.andThen
             (\( selectedAlly, { liveInputs } ) ->
                 if Utils.isPatternComplete selectedAlly.stats.move.inputs (List.reverse liveInputs) then
@@ -262,7 +258,7 @@ handleEnemyAttack delta model =
             handleAlly oldModel =
                 let
                     ( newParty, newSeed ) =
-                        Random.step (SelectionList.mapRandomMember mapAlly oldModel.party) oldModel.seed
+                        Random.step (Party.mapRandomMember mapAlly oldModel.party) oldModel.seed
                 in
                 { oldModel | seed = newSeed, party = newParty }
         in
@@ -293,7 +289,7 @@ update engineArgs msg model =
                     let
                         newModel =
                             model
-                                |> updateParty SelectionList.clearSelection
+                                |> updateParty Party.clearSelection
                     in
                     ( newModel, Cmd.none )
 
@@ -302,16 +298,16 @@ update engineArgs msg model =
                     let
                         allyHasEnergy : Bool
                         allyHasEnergy =
-                            SelectionList.getAt position model.party
+                            Party.getAt position model.party
                                 |> Maybe.map (.energy >> Meter.isFull)
                                 |> Maybe.withDefault False
                     in
                     if allyHasEnergy then
                         let
-                            updatePosition : Party -> Party
+                            updatePosition : Party Ally Selection -> Party Ally Selection
                             updatePosition party =
                                 if allyHasEnergy then
-                                    SelectionList.select position { liveInputs = [] } party
+                                    Party.select position { liveInputs = [] } party
                                         |> Result.withDefault party
 
                                 else
@@ -350,7 +346,7 @@ update engineArgs msg model =
                     else
                         ( selectedAlly, selection )
             in
-            case SelectionList.mapSelection updateInputs model.party of
+            case Party.mapSelection updateInputs model.party of
                 Err _ ->
                     noOp
 
@@ -364,7 +360,7 @@ update engineArgs msg model =
                     let
                         newModel =
                             model
-                                |> updateParty SelectionList.clearSelection
+                                |> updateParty Party.clearSelection
                     in
                     ( newModel, emitSound sounds.select )
 
@@ -388,10 +384,10 @@ update engineArgs msg model =
                         drainMeter ally =
                             { ally | energy = Meter.drain ally.energy }
 
-                        updateEnergy : Party -> Party
+                        updateEnergy : Party Ally Selection -> Party Ally Selection
                         updateEnergy party =
                             party
-                                |> SelectionList.mapSelection
+                                |> Party.mapSelection
                                     (\( ally, selectionData ) ->
                                         ( drainMeter ally, selectionData )
                                     )
@@ -401,16 +397,16 @@ update engineArgs msg model =
                             model
                                 |> applyOnSuccess
                                 |> updateParty updateEnergy
-                                |> updateParty SelectionList.clearSelection
+                                |> updateParty Party.clearSelection
                                 |> updateEnemy (\enemy -> { enemy | spriteAnimation = Just <| Animation.create Animation.Shake })
                     in
                     ( newModel, emitSound sounds.attack )
 
         HandleAnimationFrame delta ->
             let
-                updateAllyEnergies : Party -> Party
+                updateAllyEnergies : Party Ally Selection -> Party Ally Selection
                 updateAllyEnergies =
-                    SelectionList.map
+                    Party.map
                         (\ally ->
                             { ally | energy = Meter.handleAnimationFrame delta ally.energy }
                         )
@@ -426,7 +422,7 @@ update engineArgs msg model =
 
                 updateAllies : (Ally -> Ally) -> Model -> Model
                 updateAllies fn =
-                    updateParty (SelectionList.map fn)
+                    updateParty (Party.map fn)
 
                 newModel =
                     model
@@ -466,7 +462,7 @@ toUserInput : EngineArgs -> Model -> String -> Msg
 toUserInput engineArgs model string =
     let
         selectionInput =
-            SelectionList.getSelected model.party
+            Party.getSelected model.party
                 |> Maybe.andThen
                     (\( selectedAlly, _ ) ->
                         toSelectedAllyInput selectedAlly.stats.move.inputs string
@@ -559,7 +555,7 @@ renderTop model =
 
                 isAnyAllySelected =
                     model.party
-                        |> SelectionList.getSelected
+                        |> Party.getSelected
                         |> isJust
 
                 allyCanBeSelected =
@@ -611,7 +607,7 @@ renderTop model =
 
         renderAllies =
             div [ class "border border-dashed h-full w-96 flex-col" ]
-                (SelectionList.mapToList
+                (Party.mapToList
                     (\isSelected index ally ->
                         div [ class "w-full h-1/3 flex items-center" ]
                             [ div
@@ -643,10 +639,10 @@ renderTop model =
 renderBottom : Model -> Html Msg
 renderBottom model =
     let
-        renderPortrait : Party -> Html Msg
+        renderPortrait : Party Ally Selection -> Html Msg
         renderPortrait party =
             div [ class "overflow-hidden w-48 h-48 relative" ]
-                [ case SelectionList.getSelected party of
+                [ case Party.getSelected party of
                     Just ( selectedAlly, _ ) ->
                         div [ class "bg-blue-200 border-4 border-gray-900" ] [ img [ src selectedAlly.stats.avatarUrl, class "bg-blue-200" ] [] ]
 
@@ -654,10 +650,10 @@ renderBottom model =
                         div [] []
                 ]
 
-        renderPrompt : Party -> Html Msg
+        renderPrompt : Party Ally Selection -> Html Msg
         renderPrompt party =
             div [ class "w-64 h-48" ]
-                [ case SelectionList.getSelected party of
+                [ case Party.getSelected party of
                     Just ( selectedAlly, _ ) ->
                         div [ class "italic" ] [ text selectedAlly.stats.move.prompt ]
 
@@ -683,10 +679,10 @@ renderBottom model =
                 , div [ class inputLabel ] [ text "Finish" ]
                 ]
 
-        renderMove : Party -> Html Msg
+        renderMove : Party Ally Selection -> Html Msg
         renderMove party =
             div [ class "w-96 h-48 " ]
-                [ case SelectionList.getSelected party of
+                [ case Party.getSelected party of
                     Just ( selectedAlly, _ ) ->
                         div [ class "h-full w-full flex-col" ]
                             [ div [ class "w-96 h-40" ]
@@ -706,9 +702,9 @@ renderBottom model =
         renderLiveInput ( _, move ) =
             div [] [ text move ]
 
-        renderInputs : Party -> Html Msg
+        renderInputs : Party Ally Selection -> Html Msg
         renderInputs party =
-            case SelectionList.getSelected party of
+            case Party.getSelected party of
                 Just ( _, { liveInputs } ) ->
                     div [ class "flex-grow h-48 border border-gray-900" ]
                         [ div [ class "flex-col" ] (List.map renderLiveInput liveInputs)

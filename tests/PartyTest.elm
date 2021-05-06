@@ -1,8 +1,8 @@
-module SelectionListTest exposing (..)
+module PartyTest exposing (..)
 
 import Expect exposing (Expectation)
+import Party exposing (Party)
 import Random
-import SelectionList exposing (SelectionList)
 import Test exposing (Test, describe, test)
 
 
@@ -15,57 +15,57 @@ toZ _ =
     'z'
 
 
-baseList : SelectionList Char String
+baseList : Party Char String
 baseList =
-    SelectionList.create [ 'a', 'b', 'c' ]
+    Party.create [ 'a', 'b', 'c' ]
 
 
-emptyList : SelectionList Char String
+emptyList : Party Char String
 emptyList =
-    SelectionList.create []
+    Party.create []
 
 
-selectedList : SelectionList Char String
+selectedList : Party Char String
 selectedList =
     baseList
-        |> SelectionList.select 1 "data"
+        |> Party.select 1 "data"
         |> Result.withDefault baseList
 
 
 suite : Test
 suite =
-    describe "SelectionList"
+    describe "Party"
         [ describe "create"
-            [ test "creates a SelectionList" <|
+            [ test "creates a Party" <|
                 \_ ->
                     baseList
-                        |> SelectionList.toList
+                        |> Party.toList
                         |> Expect.equal [ 'a', 'b', 'c' ]
             ]
         , describe "select"
             [ test "can select an element in range" <|
                 \_ ->
                     baseList
-                        |> SelectionList.select 0 "data"
-                        |> Result.map SelectionList.getSelected
+                        |> Party.select 0 "data"
+                        |> Result.map Party.getSelected
                         |> Expect.equal (Ok (Just ( 'a', "data" )))
             , test "item order is the same after selecting" <|
                 \_ ->
                     baseList
-                        |> SelectionList.select 0 "data"
-                        |> Result.map SelectionList.toList
+                        |> Party.select 0 "data"
+                        |> Result.map Party.toList
                         |> Expect.equal (Ok [ 'a', 'b', 'c' ])
             , test "list is the same after selecting the last element" <|
                 \_ ->
                     baseList
-                        |> SelectionList.select 2 "data"
-                        |> Result.map SelectionList.toList
+                        |> Party.select 2 "data"
+                        |> Result.map Party.toList
                         |> Expect.equal (Ok [ 'a', 'b', 'c' ])
             , test "returns an Err if trying to select out of range" <|
                 \_ ->
                     baseList
-                        |> SelectionList.select 3 "data"
-                        |> Result.map SelectionList.getSelected
+                        |> Party.select 3 "data"
+                        |> Result.map Party.getSelected
                         |> Expect.err
             ]
         , describe "mapSelection"
@@ -76,31 +76,31 @@ suite =
                             ( item, "bar" )
                     in
                     selectedList
-                        |> SelectionList.mapSelection toBar
-                        |> Result.map SelectionList.getSelected
+                        |> Party.mapSelection toBar
+                        |> Result.map Party.getSelected
                         |> Expect.equal (Ok (Just ( 'b', "bar" )))
             ]
         , describe "mapNthMember"
             [ test "returns Err if index is out of range" <|
                 \_ ->
                     emptyList
-                        |> SelectionList.mapNthMember identity 1
+                        |> Party.mapNthMember identity 1
                         |> Expect.err
             , test "maps the nth member when nothing is selected" <|
                 \_ ->
                     baseList
-                        |> SelectionList.mapNthMember toZ 1
-                        |> Expect.equal (Ok (SelectionList.create [ 'a', 'z', 'c' ]))
+                        |> Party.mapNthMember toZ 1
+                        |> Expect.equal (Ok (Party.create [ 'a', 'z', 'c' ]))
             , test "maps the selected member" <|
                 \_ ->
                     let
                         expectedList =
                             selectedList
-                                |> SelectionList.mapSelection (\_ -> ( 'z', "data" ))
-                                |> Result.withDefault (SelectionList.create [ 'a', 'b', 'z' ])
+                                |> Party.mapSelection (\_ -> ( 'z', "data" ))
+                                |> Result.withDefault (Party.create [ 'a', 'b', 'z' ])
                     in
                     selectedList
-                        |> SelectionList.mapNthMember toZ 1
+                        |> Party.mapNthMember toZ 1
                         |> Expect.equal (Ok expectedList)
             ]
         ]

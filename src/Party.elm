@@ -1,5 +1,5 @@
-module SelectionList exposing
-    ( SelectionList
+module Party exposing
+    ( Party
     , clearSelection
     , create
     , getAt
@@ -19,16 +19,16 @@ import Random
 
 {-| List of values of type a, with one of them optionally selected. If selected, data of type t is attached to the selected item.
 -}
-type SelectionList a t
+type Party a t
     = SelectionList (List a) (Maybe ( a, t )) (List a)
 
 
-create : List a -> SelectionList a t
+create : List a -> Party a t
 create initial =
     SelectionList initial Nothing []
 
 
-toList : SelectionList a t -> List a
+toList : Party a t -> List a
 toList (SelectionList first maybeEl second) =
     case maybeEl of
         Nothing ->
@@ -38,22 +38,22 @@ toList (SelectionList first maybeEl second) =
             List.concat [ first, [ el ], second ]
 
 
-getSelected : SelectionList a t -> Maybe ( a, t )
+getSelected : Party a t -> Maybe ( a, t )
 getSelected (SelectionList _ el _) =
     el
 
 
-clearSelection : SelectionList a t -> SelectionList a t
+clearSelection : Party a t -> Party a t
 clearSelection =
     toList >> create
 
 
-getAt : Int -> SelectionList a t -> Maybe a
+getAt : Int -> Party a t -> Maybe a
 getAt position =
     toList >> List.Extra.getAt position
 
 
-select : Int -> t -> SelectionList a t -> Result String (SelectionList a t)
+select : Int -> t -> Party a t -> Result String (Party a t)
 select position data oldList =
     let
         list =
@@ -69,7 +69,7 @@ select position data oldList =
             Result.Ok (SelectionList (List.take position list) (Just ( selected, data )) (List.drop (position + 1) list))
 
 
-mapSelection : (( a, t ) -> ( a, t )) -> SelectionList a t -> Result String (SelectionList a t)
+mapSelection : (( a, t ) -> ( a, t )) -> Party a t -> Result String (Party a t)
 mapSelection mapFn (SelectionList first maybeEl second) =
     case maybeEl of
         Nothing ->
@@ -83,7 +83,7 @@ mapSelection mapFn (SelectionList first maybeEl second) =
             Ok <| SelectionList first newEl second
 
 
-mapToList : (Bool -> Int -> a -> b) -> SelectionList a t -> List b
+mapToList : (Bool -> Int -> a -> b) -> Party a t -> List b
 mapToList mapFn (SelectionList first maybeEl second) =
     let
         selectionList =
@@ -109,7 +109,7 @@ mapToList mapFn (SelectionList first maybeEl second) =
                 (toList selectionList)
 
 
-map : (a -> b) -> SelectionList a t -> SelectionList b t
+map : (a -> b) -> Party a t -> Party b t
 map mapFn (SelectionList first maybeEl second) =
     let
         newFirst =
@@ -140,7 +140,7 @@ map mapFn (SelectionList first maybeEl second) =
 --     Random.int lower higher
 
 
-mapNthMember : (a -> a) -> Int -> SelectionList a t -> Result String (SelectionList a t)
+mapNthMember : (a -> a) -> Int -> Party a t -> Result String (Party a t)
 mapNthMember mapFn index (SelectionList first maybeEl second) =
     case maybeEl of
         Nothing ->
@@ -173,7 +173,7 @@ mapNthMember mapFn index (SelectionList first maybeEl second) =
                 Err "Index not in range"
 
 
-mapRandomMember : (a -> a) -> SelectionList a t -> Random.Generator (SelectionList a t)
+mapRandomMember : (a -> a) -> Party a t -> Random.Generator (Party a t)
 mapRandomMember mapFn selectionList =
     case selectionList of
         SelectionList [] Nothing [] ->
