@@ -142,19 +142,6 @@ updateRandomAlly updateFn oldModel =
     { oldModel | seed = newSeed, party = newParty }
 
 
-getCompletedAlly : Model -> Maybe Ally
-getCompletedAlly model =
-    Party.getSelected model.party
-        |> Maybe.andThen
-            (\( selectedAlly, { liveInputs } ) ->
-                if Utils.isPatternComplete selectedAlly.stats.move.inputs (List.reverse liveInputs) then
-                    Just selectedAlly
-
-                else
-                    Nothing
-            )
-
-
 dealDamageToEnemy : Int -> Model -> Model
 dealDamageToEnemy amount model =
     let
@@ -176,35 +163,6 @@ updateEnemy updateFn model =
 updateEnemyEnergy : Float -> Enemy -> Enemy
 updateEnemyEnergy delta enemy =
     { enemy | energy = Meter.handleAnimationFrame delta enemy.energy }
-
-
-handleEnemyAttack : Float -> Model -> Model
-handleEnemyAttack delta model =
-    let
-        enemy =
-            model.enemy
-
-        readyToAttack =
-            Meter.isFull enemy.energy
-    in
-    if readyToAttack then
-        let
-            drainEnergy : Enemy -> Enemy
-            drainEnergy oldEnemy =
-                { enemy | energy = Meter.drain oldEnemy.energy }
-
-            updateAlly : Ally -> Ally
-            updateAlly =
-                Ally.removeHealth (toFloat enemy.stats.damage) >> Ally.addShake
-        in
-        model
-            |> updateRandomAlly updateAlly
-            |> updateEnemy drainEnergy
-            |> updateEnemy (updateEnemyEnergy delta)
-
-    else
-        model
-            |> updateEnemy (updateEnemyEnergy delta)
 
 
 update : EngineArgs -> Msg -> Model -> ( Model, Cmd Msg )
@@ -289,7 +247,7 @@ update engineArgs msg model =
                     ( { model | party = newParty }, emitSound sounds.attack )
 
         Finish ->
-            case getCompletedAlly model of
+            case Party.getSelectedAllyIfComplete model.party of
                 Nothing ->
                     -- Finish was called without a completed pattern for a selected ally
                     let
@@ -348,10 +306,38 @@ update engineArgs msg model =
                     in
                     { obj | spriteAnimation = newAnimation }
 
+                handleEnemyAttack : Model -> Model
+                handleEnemyAttack oldModel =
+                    let
+                        enemy =
+                            oldModel.enemy
+
+                        readyToAttack =
+                            Meter.isFull enemy.energy
+                    in
+                    if readyToAttack then
+                        let
+                            drainEnergy : Enemy -> Enemy
+                            drainEnergy oldEnemy =
+                                { enemy | energy = Meter.drain oldEnemy.energy }
+
+                            updateAlly : Ally -> Ally
+                            updateAlly =
+                                Ally.removeHealth (toFloat enemy.stats.damage) >> Ally.addShake
+                        in
+                        oldModel
+                            |> updateRandomAlly updateAlly
+                            |> updateEnemy drainEnergy
+                            |> updateEnemy (updateEnemyEnergy delta)
+
+                    else
+                        oldModel
+                            |> updateEnemy (updateEnemyEnergy delta)
+
                 newModel =
                     model
                         |> updateParty (Party.handleAnimationFrame delta)
-                        |> handleEnemyAttack delta
+                        |> handleEnemyAttack
                         |> updateEnemy updateAnimation
             in
             ( newModel, Cmd.none )

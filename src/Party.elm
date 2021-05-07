@@ -5,6 +5,7 @@ module Party exposing
     , create
     , getAt
     , getSelected
+    , getSelectedAllyIfComplete
     , handleAnimationFrame
     , map
     , mapNthMember
@@ -19,6 +20,7 @@ import Ally exposing (Ally)
 import List.Extra
 import Meter exposing (Meter)
 import Random
+import Utils
 
 
 type alias Input =
@@ -211,3 +213,16 @@ mapRandomMember mapFn selectionList =
 handleAnimationFrame : Float -> Party -> Party
 handleAnimationFrame delta =
     map (Ally.handleAnimationFrame delta)
+
+
+getSelectedAllyIfComplete : Party -> Maybe Ally
+getSelectedAllyIfComplete party =
+    getSelected party
+        |> Maybe.andThen
+            (\( selectedAlly, { liveInputs } ) ->
+                if Utils.isPatternComplete selectedAlly.stats.move.inputs (List.reverse liveInputs) then
+                    Just selectedAlly
+
+                else
+                    Nothing
+            )
