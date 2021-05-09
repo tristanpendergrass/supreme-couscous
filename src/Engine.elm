@@ -523,7 +523,7 @@ renderTop model =
                 [ div [ class "flex items-end space-x-2" ]
                     [ div [ class "mb-2" ] [ div [ class allyStatsContainer ] [] ]
                     , div [ class "relative" ]
-                        [ img [ class "w-24 h-24", src "tombstone.png" ] []
+                        [ img [ class "w-24 h-24", src stats.tombstoneUrl ] []
                         ]
                     ]
                 ]

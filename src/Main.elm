@@ -8,6 +8,7 @@ allyOne : Ally.Stats
 allyOne =
     { avatarUrl = "thief_portrait.png"
     , battleUrl = "thief.png"
+    , tombstoneUrl = "tombstone.png"
     , move =
         { onSuccess = [ Ally.damage 10 ]
         , prompt = "A quick jab, followed by a slash..."
@@ -25,6 +26,7 @@ allyTwo : Ally.Stats
 allyTwo =
     { avatarUrl = "knight_portrait.png"
     , battleUrl = "knight.png"
+    , tombstoneUrl = "knight_tombstone.png"
     , move =
         { onSuccess = [ Ally.damage 5 ]
         , prompt = "Analyze the opponent's weak spots and then strike twice..."
@@ -43,6 +45,7 @@ allyThree : Ally.Stats
 allyThree =
     { avatarUrl = "priest_portrait.png"
     , battleUrl = "priest.png"
+    , tombstoneUrl = "tombstone.png"
     , move =
         { onSuccess = [ Ally.damage 20 ]
         , prompt = "Focus, determination, and then yell 'hoody hoo!'..."

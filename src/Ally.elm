@@ -32,6 +32,7 @@ type alias Move =
 type alias Stats =
     { avatarUrl : String
     , battleUrl : String
+    , tombstoneUrl : String
     , move : Move
     , maxHealth : Int
     , maxEnergy : Int
