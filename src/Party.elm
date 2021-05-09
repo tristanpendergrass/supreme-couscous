@@ -5,15 +5,11 @@ module Party exposing
     , clearSelection
     , create
     , damageRandomMember
-    , getLiveAllyAt
     , getSelected
     , getSelectedAllyIfComplete
     , handleAnimationFrame
-    , mapAliveAllies
-    , mapNthMember
     , mapSelection
-    , select
-    , toList
+    , selectPosition
     , toListWithSelectionStatus
     )
 
@@ -113,25 +109,6 @@ mapIfAlive fn allySpot =
 getLiveAllyAt : Int -> Party -> Maybe Ally
 getLiveAllyAt position =
     toList >> List.Extra.getAt position >> Maybe.andThen mapLiveAlly
-
-
-select : Int -> Selection -> Party -> Result String Party
-select position data oldList =
-    let
-        list =
-            toList oldList
-    in
-    case List.Extra.getAt position list of
-        -- equivalent to myArr[3]
-        Nothing ->
-            -- out of range
-            Result.Err <| "Can't select position " ++ String.fromInt position
-
-        Just (DeadAlly _) ->
-            Result.Err <| "Can't select dead ally"
-
-        Just (AliveAlly selectedAlly) ->
-            Result.Ok (Party (List.take position list) (Just ( selectedAlly, data )) (List.drop (position + 1) list))
 
 
 mapSelection : (( Ally, Selection ) -> ( Ally, Selection )) -> Party -> Result String Party
@@ -290,3 +267,35 @@ getSelectedAllyIfComplete party =
                 else
                     Nothing
             )
+
+
+selectPosition : Int -> Party -> Maybe Party
+selectPosition index party =
+    let
+        allyHasEnergy =
+            getLiveAllyAt index party
+                |> Maybe.map (.energy >> Meter.isFull)
+                |> Maybe.withDefault False
+    in
+    if allyHasEnergy then
+        let
+            list =
+                toList party
+
+            initialData : Selection
+            initialData =
+                { liveInputs = [] }
+        in
+        List.Extra.getAt index list
+            |> Maybe.andThen
+                (\allySpot ->
+                    case allySpot of
+                        DeadAlly _ ->
+                            Nothing
+
+                        AliveAlly selectedAlly ->
+                            Just (Party (List.take index list) (Just ( selectedAlly, initialData )) (List.drop (index + 1) list))
+                )
+
+    else
+        Nothing

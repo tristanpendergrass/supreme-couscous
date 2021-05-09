@@ -187,33 +187,17 @@ update engineArgs msg model =
                     ( newModel, Cmd.none )
 
                 Just position ->
-                    -- Selection of ally
-                    let
-                        allyHasEnergy : Bool
-                        allyHasEnergy =
-                            Party.getLiveAllyAt position model.party
-                                |> Maybe.map (.energy >> Meter.isFull)
-                                |> Maybe.withDefault False
-                    in
-                    if allyHasEnergy then
-                        let
-                            updatePosition : Party -> Party
-                            updatePosition party =
-                                if allyHasEnergy then
-                                    Party.select position { liveInputs = [] } party
-                                        |> Result.withDefault party
+                    case Party.selectPosition position model.party of
+                        Nothing ->
+                            -- TODO: sound effect?
+                            noOp
 
-                                else
-                                    party
-
-                            newModel =
-                                model
-                                    |> updateParty updatePosition
-                        in
-                        ( newModel, emitSound sounds.select )
-
-                    else
-                        noOp
+                        Just newParty ->
+                            let
+                                newModel =
+                                    { model | party = newParty }
+                            in
+                            ( newModel, emitSound sounds.select )
 
         Input input ->
             let
@@ -320,10 +304,6 @@ update engineArgs msg model =
                             drainEnergy : Enemy -> Enemy
                             drainEnergy oldEnemy =
                                 { enemy | energy = Meter.drain oldEnemy.energy }
-
-                            updateAlly : Ally -> Ally
-                            updateAlly =
-                                Ally.removeHealth (toFloat enemy.stats.damage) >> Ally.addShake
                         in
                         oldModel
                             |> damageRandomAlly (toFloat enemy.stats.damage)
