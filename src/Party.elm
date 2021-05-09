@@ -14,14 +14,12 @@ module Party exposing
     , mapSelection
     , select
     , toList
-    ,  toListWithSelectionStatus
-       -- , mapToList
-
+    , toListWithSelectionStatus
     )
 
 import Ally exposing (Ally)
 import List.Extra
-import Meter exposing (Meter)
+import Meter
 import Random
 import Utils
 
@@ -150,31 +148,6 @@ mapSelection mapFn (Party first maybeEl second) =
             Ok <| Party first newEl second
 
 
-
--- mapToList : (Bool -> Bool -> Ally -> a) -> Party -> List a
--- mapToList mapFn (SelectionList first maybeEl second) =
---     let
---         selectionList =
---             SelectionList first maybeEl second
---     in
---     case maybeEl of
---         Nothing ->
---             List.map (mapFn False) (toList selectionList)
---         Just _ ->
---             let
---                 selectedIndex =
---                     List.length first
---             in
---             List.map
---                 (\item ->
---                     if index == selectedIndex then
---                         mapFn True index item
---                     else
---                         mapFn False index item
---                 )
---                 (toList selectionList)
-
-
 mapAliveAllies : (Ally -> Ally) -> Party -> Party
 mapAliveAllies fn (Party first maybeEl second) =
     let
@@ -190,21 +163,6 @@ mapAliveAllies fn (Party first maybeEl second) =
                     (\( el, data ) -> Just ( fn el, data ))
     in
     Party newFirst newEl newSecond
-
-
-
--- getRandomIndex : a -> SelectionList a t -> Random.Generator (Maybe Int)
--- getRandomIndex selectionList =
---     let
---         lower =
---             0
---         higher =
---             selectionList
---                 |> toList
---                 |> List.length
---                 |> (+) 1
---     in
---     Random.int lower higher
 
 
 mapNthMember : (AllySpot -> AllySpot) -> Int -> Party -> Result String Party
@@ -247,22 +205,6 @@ mapNthMember fn index (Party first maybeEl second) =
 
             else
                 Err "Index not in range"
-
-
-headAndTail : Party -> Maybe ( AllySpot, Party )
-headAndTail party =
-    case party of
-        Party (first :: rest) maybeEl second ->
-            Just ( first, Party rest maybeEl second )
-
-        Party [] (Just ( ally, _ )) second ->
-            Just ( AliveAlly ally, Party [] Nothing second )
-
-        Party [] Nothing (second :: rest) ->
-            Just ( second, Party [] Nothing rest )
-
-        Party [] Nothing [] ->
-            Nothing
 
 
 isAlive : AllySpot -> Bool
