@@ -1,19 +1,22 @@
 module Party exposing
-    ( Party
+    ( AllySpot(..)
+    , Party
     , Selection
     , clearSelection
     , create
-    , getAt
+    , getLiveAllyAt
     , getSelected
     , getSelectedAllyIfComplete
     , handleAnimationFrame
-    , map
+    , mapAliveAllies
     , mapNthMember
     , mapRandomMember
     , mapSelection
-    , mapToList
     , select
     , toList
+    ,  toListWithSelectionStatus
+       -- , mapToList
+
     )
 
 import Ally exposing (Ally)
@@ -21,6 +24,11 @@ import List.Extra
 import Meter exposing (Meter)
 import Random
 import Utils
+
+
+type AllySpot
+    = DeadAlly Ally.Stats
+    | AliveAlly Ally
 
 
 type alias Input =
@@ -35,37 +43,78 @@ type alias Selection =
 {-| List of values of type a, with one of them optionally selected. If selected, data of type t is attached to the selected item.
 -}
 type Party
-    = SelectionList (List Ally) (Maybe ( Ally, Selection )) (List Ally)
+    = Party (List AllySpot) (Maybe ( Ally, Selection )) (List AllySpot)
 
 
 create : List Ally -> Party
-create initial =
-    SelectionList initial Nothing []
+create allies =
+    Party (List.map AliveAlly allies) Nothing []
 
 
-toList : Party -> List Ally
-toList (SelectionList first maybeEl second) =
+createFromAllySpot : List AllySpot -> Party
+createFromAllySpot allies =
+    Party allies Nothing []
+
+
+toList : Party -> List AllySpot
+toList (Party first maybeEl second) =
     case maybeEl of
         Nothing ->
             List.concat [ first, second ]
 
         Just ( el, _ ) ->
-            List.concat [ first, [ el ], second ]
+            List.concat [ first, [ AliveAlly el ], second ]
+
+
+toListWithSelectionStatus : Party -> List ( AllySpot, Bool )
+toListWithSelectionStatus (Party first maybeEl second) =
+    let
+        notSelected : AllySpot -> ( AllySpot, Bool )
+        notSelected allySpot =
+            ( allySpot, False )
+    in
+    case maybeEl of
+        Nothing ->
+            List.concat [ first, second ]
+                |> List.map notSelected
+
+        Just ( el, _ ) ->
+            List.concat [ List.map notSelected first, [ ( AliveAlly el, True ) ], List.map notSelected second ]
 
 
 getSelected : Party -> Maybe ( Ally, Selection )
-getSelected (SelectionList _ el _) =
+getSelected (Party _ el _) =
     el
 
 
 clearSelection : Party -> Party
 clearSelection =
-    toList >> create
+    toList >> createFromAllySpot
 
 
-getAt : Int -> Party -> Maybe Ally
-getAt position =
-    toList >> List.Extra.getAt position
+mapLiveAlly : AllySpot -> Maybe Ally
+mapLiveAlly allySpot =
+    case allySpot of
+        AliveAlly ally ->
+            Just ally
+
+        DeadAlly _ ->
+            Nothing
+
+
+mapIfAlive : (Ally -> Ally) -> AllySpot -> AllySpot
+mapIfAlive fn allySpot =
+    case allySpot of
+        AliveAlly ally ->
+            AliveAlly (fn ally)
+
+        DeadAlly _ ->
+            allySpot
+
+
+getLiveAllyAt : Int -> Party -> Maybe Ally
+getLiveAllyAt position =
+    toList >> List.Extra.getAt position >> Maybe.andThen mapLiveAlly
 
 
 select : Int -> Selection -> Party -> Result String Party
@@ -80,12 +129,15 @@ select position data oldList =
             -- out of range
             Result.Err <| "Can't select position " ++ String.fromInt position
 
-        Just selected ->
-            Result.Ok (SelectionList (List.take position list) (Just ( selected, data )) (List.drop (position + 1) list))
+        Just (DeadAlly _) ->
+            Result.Err <| "Can't select dead ally"
+
+        Just (AliveAlly selectedAlly) ->
+            Result.Ok (Party (List.take position list) (Just ( selectedAlly, data )) (List.drop (position + 1) list))
 
 
 mapSelection : (( Ally, Selection ) -> ( Ally, Selection )) -> Party -> Result String Party
-mapSelection mapFn (SelectionList first maybeEl second) =
+mapSelection mapFn (Party first maybeEl second) =
     case maybeEl of
         Nothing ->
             Err "Can't modify data with no selection"
@@ -95,49 +147,49 @@ mapSelection mapFn (SelectionList first maybeEl second) =
                 newEl =
                     Just (mapFn ( el, data ))
             in
-            Ok <| SelectionList first newEl second
+            Ok <| Party first newEl second
 
 
-mapToList : (Bool -> Int -> Ally -> a) -> Party -> List a
-mapToList mapFn (SelectionList first maybeEl second) =
-    let
-        selectionList =
-            SelectionList first maybeEl second
-    in
-    case maybeEl of
-        Nothing ->
-            List.indexedMap (mapFn False) (toList selectionList)
 
-        Just _ ->
-            let
-                selectedIndex =
-                    List.length first
-            in
-            List.indexedMap
-                (\index item ->
-                    if index == selectedIndex then
-                        mapFn True index item
+-- mapToList : (Bool -> Bool -> Ally -> a) -> Party -> List a
+-- mapToList mapFn (SelectionList first maybeEl second) =
+--     let
+--         selectionList =
+--             SelectionList first maybeEl second
+--     in
+--     case maybeEl of
+--         Nothing ->
+--             List.map (mapFn False) (toList selectionList)
+--         Just _ ->
+--             let
+--                 selectedIndex =
+--                     List.length first
+--             in
+--             List.map
+--                 (\item ->
+--                     if index == selectedIndex then
+--                         mapFn True index item
+--                     else
+--                         mapFn False index item
+--                 )
+--                 (toList selectionList)
 
-                    else
-                        mapFn False index item
-                )
-                (toList selectionList)
 
-
-map : (Ally -> Ally) -> Party -> Party
-map mapFn (SelectionList first maybeEl second) =
+mapAliveAllies : (Ally -> Ally) -> Party -> Party
+mapAliveAllies fn (Party first maybeEl second) =
     let
         newFirst =
-            List.map mapFn first
+            List.map (mapIfAlive fn) first
 
         newSecond =
-            List.map mapFn second
+            List.map (mapIfAlive fn) second
 
         newEl =
             maybeEl
-                |> Maybe.andThen (\( el, data ) -> Just ( mapFn el, data ))
+                |> Maybe.andThen
+                    (\( el, data ) -> Just ( fn el, data ))
     in
-    SelectionList newFirst newEl newSecond
+    Party newFirst newEl newSecond
 
 
 
@@ -156,17 +208,21 @@ map mapFn (SelectionList first maybeEl second) =
 
 
 mapNthMember : (Ally -> Ally) -> Int -> Party -> Result String Party
-mapNthMember mapFn index (SelectionList first maybeEl second) =
+mapNthMember fn index (Party first maybeEl second) =
+    let
+        mapAllySpot =
+            mapIfAlive fn
+    in
     case maybeEl of
         Nothing ->
             if index < 0 then
                 Err "Index not in range"
 
             else if index < List.length first then
-                Ok (SelectionList (List.Extra.updateAt index mapFn first) maybeEl second)
+                Ok (Party (List.Extra.updateAt index mapAllySpot first) maybeEl second)
 
             else if index < List.length first + List.length second then
-                Ok (SelectionList first maybeEl (List.Extra.updateAt (List.length first + index) mapFn second))
+                Ok (Party first maybeEl (List.Extra.updateAt (List.length first + index) mapAllySpot second))
 
             else
                 Err "Index not in range"
@@ -176,43 +232,84 @@ mapNthMember mapFn index (SelectionList first maybeEl second) =
                 Err "Index not in range"
 
             else if index < List.length first then
-                Ok (SelectionList (List.Extra.updateAt index mapFn first) maybeEl second)
+                Ok (Party (List.Extra.updateAt index mapAllySpot first) maybeEl second)
 
             else if index == List.length first then
-                Ok (SelectionList first (Just ( mapFn el, data )) second)
+                Ok (Party first (Just ( fn el, data )) second)
 
             else if index < List.length first + List.length second then
-                Ok (SelectionList first maybeEl (List.Extra.updateAt (List.length first + index) mapFn second))
+                Ok (Party first maybeEl (List.Extra.updateAt (List.length first + index) mapAllySpot second))
 
             else
                 Err "Index not in range"
 
 
+headAndTail : Party -> Maybe ( AllySpot, Party )
+headAndTail party =
+    case party of
+        Party (first :: rest) maybeEl second ->
+            Just ( first, Party rest maybeEl second )
+
+        Party [] (Just ( ally, _ )) second ->
+            Just ( AliveAlly ally, Party [] Nothing second )
+
+        Party [] Nothing (second :: rest) ->
+            Just ( second, Party [] Nothing rest )
+
+        Party [] Nothing [] ->
+            Nothing
+
+
+isAlive : AllySpot -> Bool
+isAlive allySpot =
+    case allySpot of
+        AliveAlly _ ->
+            True
+
+        DeadAlly _ ->
+            False
+
+
+{-| Random generator that applies a mapping function to a random alive party member.
+Approach:
+
+  - Iterate over party creating list of indexes with a living party member
+  - If list is empty then return original list (possible to make this a special return type if need arises)
+  - If list has at least one member, use Random.uniform
+
+-}
+indexesOfAliveAllies : Party -> List Int
+indexesOfAliveAllies =
+    let
+        addIndexIfAlive : Int -> AllySpot -> List Int -> List Int
+        addIndexIfAlive index allySpot accum =
+            if isAlive allySpot then
+                index :: accum
+
+            else
+                accum
+    in
+    toList >> List.Extra.indexedFoldl addIndexIfAlive []
+
+
 mapRandomMember : (Ally -> Ally) -> Party -> Random.Generator Party
-mapRandomMember mapFn selectionList =
-    case selectionList of
-        SelectionList [] Nothing [] ->
-            Random.constant selectionList
+mapRandomMember mapFn party =
+    case indexesOfAliveAllies party of
+        first :: rest ->
+            Random.uniform first rest
+                |> Random.map
+                    (\randomIndex ->
+                        mapNthMember mapFn randomIndex party
+                            |> Result.withDefault party
+                    )
 
-        SelectionList _ _ _ ->
-            let
-                upperBound =
-                    selectionList
-                        |> toList
-                        |> List.length
-
-                indexGenerator : Random.Generator Int
-                indexGenerator =
-                    Random.int 0 upperBound
-            in
-            indexGenerator
-                |> Random.map (\index -> mapNthMember mapFn index selectionList)
-                |> Random.map (Result.withDefault selectionList)
+        [] ->
+            Random.constant party
 
 
 handleAnimationFrame : Float -> Party -> Party
 handleAnimationFrame delta =
-    map (Ally.handleAnimationFrame delta)
+    mapAliveAllies (Ally.handleAnimationFrame delta)
 
 
 getSelectedAllyIfComplete : Party -> Maybe Ally

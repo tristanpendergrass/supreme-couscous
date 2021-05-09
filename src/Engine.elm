@@ -191,7 +191,7 @@ update engineArgs msg model =
                     let
                         allyHasEnergy : Bool
                         allyHasEnergy =
-                            Party.getAt position model.party
+                            Party.getLiveAllyAt position model.party
                                 |> Maybe.map (.energy >> Meter.isFull)
                                 |> Maybe.withDefault False
                     in
@@ -453,8 +453,8 @@ inputLabel =
 renderTop : Model -> Html Msg
 renderTop model =
     let
-        renderAlly : Bool -> Ally -> Msg -> Int -> Html Msg
-        renderAlly isSelected ally selectionMsg index =
+        renderAliveAlly : Bool -> Ally -> Msg -> Int -> Html Msg
+        renderAliveAlly isSelected ally selectionMsg index =
             let
                 { stats, health, energy } =
                     ally
@@ -514,18 +514,28 @@ renderTop model =
                     [ div [ class "mb-2" ] [ allyStats ], allyImage ]
                 ]
 
+        renderDeadAlly : Ally.Stats -> Html Msg
+        renderDeadAlly stats =
+            div [] [ text " RIP " ]
+
         renderAllies =
             div [ class "border border-dashed h-full w-96 flex-col" ]
-                (Party.mapToList
-                    (\isSelected index ally ->
-                        div [ class "w-full h-1/3 flex items-center" ]
-                            [ div
-                                [ class "ml-4" ]
-                                [ renderAlly isSelected ally (SelectAlly (Just index)) index
+                (model.party
+                    |> Party.toListWithSelectionStatus
+                    |> List.indexedMap
+                        (\index ( allySpot, isSelected ) ->
+                            div [ class "w-full h-1/3 flex items-center" ]
+                                [ div
+                                    [ class "ml-4" ]
+                                    [ case allySpot of
+                                        Party.AliveAlly ally ->
+                                            renderAliveAlly isSelected ally (SelectAlly (Just index)) index
+
+                                        Party.DeadAlly stats ->
+                                            renderDeadAlly stats
+                                    ]
                                 ]
-                            ]
-                    )
-                    model.party
+                        )
                 )
 
         renderEnemy : Enemy -> Html Msg
