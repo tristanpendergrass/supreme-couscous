@@ -4,13 +4,13 @@ module Party exposing
     , Selection
     , clearSelection
     , create
+    , damageRandomMember
     , getLiveAllyAt
     , getSelected
     , getSelectedAllyIfComplete
     , handleAnimationFrame
     , mapAliveAllies
     , mapNthMember
-    , mapRandomMember
     , mapSelection
     , select
     , toList
@@ -207,22 +207,18 @@ mapAliveAllies fn (Party first maybeEl second) =
 --     Random.int lower higher
 
 
-mapNthMember : (Ally -> Ally) -> Int -> Party -> Result String Party
+mapNthMember : (AllySpot -> AllySpot) -> Int -> Party -> Result String Party
 mapNthMember fn index (Party first maybeEl second) =
-    let
-        mapAllySpot =
-            mapIfAlive fn
-    in
     case maybeEl of
         Nothing ->
             if index < 0 then
                 Err "Index not in range"
 
             else if index < List.length first then
-                Ok (Party (List.Extra.updateAt index mapAllySpot first) maybeEl second)
+                Ok (Party (List.Extra.updateAt index fn first) maybeEl second)
 
             else if index < List.length first + List.length second then
-                Ok (Party first maybeEl (List.Extra.updateAt (List.length first + index) mapAllySpot second))
+                Ok (Party first maybeEl (List.Extra.updateAt (List.length first + index) fn second))
 
             else
                 Err "Index not in range"
@@ -232,13 +228,22 @@ mapNthMember fn index (Party first maybeEl second) =
                 Err "Index not in range"
 
             else if index < List.length first then
-                Ok (Party (List.Extra.updateAt index mapAllySpot first) maybeEl second)
+                Ok (Party (List.Extra.updateAt index fn first) maybeEl second)
 
             else if index == List.length first then
-                Ok (Party first (Just ( fn el, data )) second)
+                let
+                    newAllySpot =
+                        fn (AliveAlly el)
+                in
+                case newAllySpot of
+                    AliveAlly newAlly ->
+                        Ok (Party first (Just ( newAlly, data )) second)
+
+                    DeadAlly stats ->
+                        Ok (Party first Nothing (DeadAlly stats :: second))
 
             else if index < List.length first + List.length second then
-                Ok (Party first maybeEl (List.Extra.updateAt (List.length first + index) mapAllySpot second))
+                Ok (Party first maybeEl (List.Extra.updateAt (List.length first + index) fn second))
 
             else
                 Err "Index not in range"
@@ -292,14 +297,34 @@ indexesOfAliveAllies =
     toList >> List.Extra.indexedFoldl addIndexIfAlive []
 
 
-mapRandomMember : (Ally -> Ally) -> Party -> Random.Generator Party
-mapRandomMember mapFn party =
+damageRandomMember : Float -> Party -> Random.Generator Party
+damageRandomMember damageAmount party =
+    let
+        damageAlly : AllySpot -> AllySpot
+        damageAlly allySpot =
+            case allySpot of
+                DeadAlly _ ->
+                    allySpot
+
+                AliveAlly ally ->
+                    let
+                        newAlly =
+                            ally
+                                |> Ally.removeHealth damageAmount
+                                |> Ally.addShake
+                    in
+                    if Meter.isEmpty newAlly.health then
+                        DeadAlly ally.stats
+
+                    else
+                        AliveAlly newAlly
+    in
     case indexesOfAliveAllies party of
         first :: rest ->
             Random.uniform first rest
                 |> Random.map
                     (\randomIndex ->
-                        mapNthMember mapFn randomIndex party
+                        mapNthMember damageAlly randomIndex party
                             |> Result.withDefault party
                     )
 

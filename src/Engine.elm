@@ -133,11 +133,11 @@ updateParty updateFn model =
     { model | party = updateFn model.party }
 
 
-updateRandomAlly : (Ally -> Ally) -> Model -> Model
-updateRandomAlly updateFn oldModel =
+damageRandomAlly : Float -> Model -> Model
+damageRandomAlly damageAmount oldModel =
     let
         ( newParty, newSeed ) =
-            Random.step (Party.mapRandomMember updateFn oldModel.party) oldModel.seed
+            Random.step (Party.damageRandomMember damageAmount oldModel.party) oldModel.seed
     in
     { oldModel | seed = newSeed, party = newParty }
 
@@ -326,7 +326,7 @@ update engineArgs msg model =
                                 Ally.removeHealth (toFloat enemy.stats.damage) >> Ally.addShake
                         in
                         oldModel
-                            |> updateRandomAlly updateAlly
+                            |> damageRandomAlly (toFloat enemy.stats.damage)
                             |> updateEnemy drainEnergy
                             |> updateEnemy (updateEnemyEnergy delta)
 
@@ -453,6 +453,9 @@ inputLabel =
 renderTop : Model -> Html Msg
 renderTop model =
     let
+        allyStatsContainer =
+            "w-8"
+
         renderAliveAlly : Bool -> Ally -> Msg -> Int -> Html Msg
         renderAliveAlly isSelected ally selectionMsg index =
             let
@@ -472,7 +475,7 @@ renderTop model =
                         && Meter.isFull ally.energy
 
                 allyStats =
-                    div [ class "flex space-x-1" ]
+                    div [ class allyStatsContainer, class "flex space-x-1" ]
                         [ energy
                             |> Meter.setColor Meter.Blue
                             |> Meter.setDisplaySize 75
@@ -516,7 +519,14 @@ renderTop model =
 
         renderDeadAlly : Ally.Stats -> Html Msg
         renderDeadAlly stats =
-            div [] [ text " RIP " ]
+            div [ class "flex-col space-y-2" ]
+                [ div [ class "flex items-end space-x-2" ]
+                    [ div [ class "mb-2" ] [ div [ class allyStatsContainer ] [] ]
+                    , div [ class "relative" ]
+                        [ img [ class "w-24 h-24", src "tombstone.png" ] []
+                        ]
+                    ]
+                ]
 
         renderAllies =
             div [ class "border border-dashed h-full w-96 flex-col" ]
