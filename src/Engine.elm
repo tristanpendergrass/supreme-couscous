@@ -196,6 +196,11 @@ type GameUpdate
     | PlayerLost ( Game, Cmd Msg )
 
 
+isGameLost : Game -> Bool
+isGameLost game =
+    Party.isEveryoneDead game.party
+
+
 updateGame : EngineArgs -> Msg -> Game -> GameUpdate
 updateGame engineArgs msg game =
     let
@@ -355,7 +360,11 @@ updateGame engineArgs msg game =
                         |> handleEnemyAttack
                         |> updateEnemy updateAnimation
             in
-            ContinueGame ( newGame, Cmd.none )
+            if isGameLost newGame then
+                PlayerLost ( newGame, Cmd.none )
+
+            else
+                ContinueGame ( newGame, Cmd.none )
 
 
 

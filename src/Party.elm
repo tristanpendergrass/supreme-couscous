@@ -8,6 +8,7 @@ module Party exposing
     , getSelected
     , getSelectedAllyIfComplete
     , handleAnimationFrame
+    , isEveryoneDead
     , mapSelection
     , selectPosition
     , toListWithSelectionStatus
@@ -299,3 +300,8 @@ selectPosition index party =
 
     else
         Nothing
+
+
+isEveryoneDead : Party -> Bool
+isEveryoneDead =
+    toList >> List.all (isAlive >> not)
