@@ -201,6 +201,11 @@ isGameLost game =
     Party.isEveryoneDead game.party
 
 
+isGameWon : Game -> Bool
+isGameWon game =
+    Meter.getCurrent game.enemy.health == 0
+
+
 updateGame : EngineArgs -> Msg -> Game -> GameUpdate
 updateGame engineArgs msg game =
     let
@@ -317,7 +322,11 @@ updateGame engineArgs msg game =
                                 |> updateParty Party.clearSelection
                                 |> updateEnemy (\enemy -> { enemy | spriteAnimation = Just <| Animation.create Animation.Shake })
                     in
-                    ContinueGame ( newGame, emitSound sounds.attack )
+                    if isGameWon newGame then
+                        PlayerWon ( newGame, emitSound sounds.attack )
+
+                    else
+                        ContinueGame ( newGame, emitSound sounds.attack )
 
         HandleAnimationFrame delta ->
             let
