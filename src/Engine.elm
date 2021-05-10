@@ -691,7 +691,19 @@ view engineArgs model =
             renderGame game
 
         GameLost game ->
-            renderGame game
+            div []
+                [ div [ class "fixed w-screen h-screen bg-gray-700 bg-opacity-75 z-10" ]
+                    [ div [ class "absolute w-full flex justify-center top-20" ]
+                        [ div [ class "p-12 text-2xl font-bold border-4 border-gray-900 bg-gray-500 text-gray-100" ] [ text "Game Lost" ] ]
+                    ]
+                , renderGame game
+                ]
 
         GameWon game ->
-            renderGame game
+            div []
+                [ div [ class "fixed w-screen h-screen bg-gray-700 bg-opacity-75 z-10" ]
+                    [ div [ class "absolute w-full flex justify-center top-20" ]
+                        [ div [ class "p-12 text-2xl font-bold border-4 border-gray-900 bg-green-500 text-gray-900" ] [ text "Game Won" ] ]
+                    ]
+                , renderGame game
+                ]
