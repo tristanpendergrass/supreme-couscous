@@ -82,11 +82,17 @@ type alias Enemy =
     }
 
 
-type alias Model =
+type alias Game =
     { seed : Random.Seed
     , party : Party
     , enemy : Enemy
     }
+
+
+type Model
+    = GameInProgress Game
+    | GameWon Game
+    | GameLost Game
 
 
 init : EngineArgs -> () -> ( Model, Cmd Msg )
@@ -105,10 +111,11 @@ init engineArgs _ =
             , spriteAnimation = Nothing
             }
     in
-    ( { seed = Random.initialSeed 0
-      , party = initialParty
-      , enemy = initialEnemy
-      }
+    ( GameInProgress
+        { seed = Random.initialSeed 0
+        , party = initialParty
+        , enemy = initialEnemy
+        }
     , Cmd.none
     )
 
@@ -128,21 +135,21 @@ type Msg
     | HandleAnimationFrame Float
 
 
-updateParty : (Party -> Party) -> Model -> Model
-updateParty updateFn model =
-    { model | party = updateFn model.party }
+updateParty : (Party -> Party) -> Game -> Game
+updateParty updateFn game =
+    { game | party = updateFn game.party }
 
 
-damageRandomAlly : Float -> Model -> Model
-damageRandomAlly damageAmount oldModel =
+damageRandomAlly : Float -> Game -> Game
+damageRandomAlly damageAmount game =
     let
         ( newParty, newSeed ) =
-            Random.step (Party.damageRandomMember damageAmount oldModel.party) oldModel.seed
+            Random.step (Party.damageRandomMember damageAmount game.party) game.seed
     in
-    { oldModel | seed = newSeed, party = newParty }
+    { game | seed = newSeed, party = newParty }
 
 
-dealDamageToEnemy : Int -> Model -> Model
+dealDamageToEnemy : Int -> Game -> Game
 dealDamageToEnemy amount model =
     let
         oldEnemy =
@@ -155,9 +162,9 @@ dealDamageToEnemy amount model =
     { model | enemy = newEnemy }
 
 
-updateEnemy : (Enemy -> Enemy) -> Model -> Model
-updateEnemy updateFn model =
-    { model | enemy = updateFn model.enemy }
+updateEnemy : (Enemy -> Enemy) -> Game -> Game
+updateEnemy updateFn game =
+    { game | enemy = updateFn game.enemy }
 
 
 updateEnemyEnergy : Float -> Enemy -> Enemy
@@ -167,9 +174,33 @@ updateEnemyEnergy delta enemy =
 
 update : EngineArgs -> Msg -> Model -> ( Model, Cmd Msg )
 update engineArgs msg model =
+    case model of
+        GameInProgress game ->
+            case updateGame engineArgs msg game of
+                ContinueGame ( newGame, commands ) ->
+                    ( GameInProgress newGame, commands )
+
+                PlayerWon ( newGame, commands ) ->
+                    ( GameWon newGame, commands )
+
+                PlayerLost ( newGame, commands ) ->
+                    ( GameLost newGame, commands )
+
+        _ ->
+            ( model, Cmd.none )
+
+
+type GameUpdate
+    = ContinueGame ( Game, Cmd Msg )
+    | PlayerWon ( Game, Cmd Msg )
+    | PlayerLost ( Game, Cmd Msg )
+
+
+updateGame : EngineArgs -> Msg -> Game -> GameUpdate
+updateGame engineArgs msg game =
     let
         noOp =
-            ( model, Cmd.none )
+            ContinueGame ( game, Cmd.none )
     in
     case msg of
         NoOp ->
@@ -180,24 +211,24 @@ update engineArgs msg model =
                 Nothing ->
                     -- Deselection
                     let
-                        newModel =
-                            model
+                        newGame =
+                            game
                                 |> updateParty Party.clearSelection
                     in
-                    ( newModel, Cmd.none )
+                    ContinueGame ( newGame, Cmd.none )
 
                 Just position ->
-                    case Party.selectPosition position model.party of
+                    case Party.selectPosition position game.party of
                         Nothing ->
                             -- TODO: sound effect?
                             noOp
 
                         Just newParty ->
                             let
-                                newModel =
-                                    { model | party = newParty }
+                                newGame =
+                                    { game | party = newParty }
                             in
-                            ( newModel, emitSound sounds.select )
+                            ContinueGame ( newGame, emitSound sounds.select )
 
         Input input ->
             let
@@ -223,39 +254,43 @@ update engineArgs msg model =
                     else
                         ( selectedAlly, selection )
             in
-            case Party.mapSelection updateInputs model.party of
+            case Party.mapSelection updateInputs game.party of
                 Err _ ->
                     noOp
 
                 Ok newParty ->
-                    ( { model | party = newParty }, emitSound sounds.attack )
+                    let
+                        newGame =
+                            { game | party = newParty }
+                    in
+                    ContinueGame ( newGame, emitSound sounds.attack )
 
         Finish ->
-            case Party.getSelectedAllyIfComplete model.party of
+            case Party.getSelectedAllyIfComplete game.party of
                 Nothing ->
                     -- Finish was called without a completed pattern for a selected ally
                     let
-                        newModel =
-                            model
+                        newGame =
+                            game
                                 |> updateParty Party.clearSelection
                     in
-                    ( newModel, emitSound sounds.select )
+                    ContinueGame ( newGame, emitSound sounds.select )
 
                 Just selectedAlly ->
                     let
-                        applyOnSuccess : Model -> Model
-                        applyOnSuccess oldModel =
+                        applyOnSuccess : Game -> Game
+                        applyOnSuccess oldGame =
                             let
                                 effects =
                                     selectedAlly.stats.move.onSuccess
 
-                                applyEffect : Ally.Effect -> Model -> Model
-                                applyEffect effect m =
+                                applyEffect : Ally.Effect -> Game -> Game
+                                applyEffect effect g =
                                     case effect of
                                         Ally.Damage amount ->
-                                            dealDamageToEnemy amount m
+                                            dealDamageToEnemy amount g
                             in
-                            List.foldl applyEffect oldModel effects
+                            List.foldl applyEffect oldGame effects
 
                         drainMeter : Ally -> Ally
                         drainMeter ally =
@@ -270,14 +305,14 @@ update engineArgs msg model =
                                     )
                                 |> Result.withDefault party
 
-                        newModel =
-                            model
+                        newGame =
+                            game
                                 |> applyOnSuccess
                                 |> updateParty updateEnergy
                                 |> updateParty Party.clearSelection
                                 |> updateEnemy (\enemy -> { enemy | spriteAnimation = Just <| Animation.create Animation.Shake })
                     in
-                    ( newModel, emitSound sounds.attack )
+                    ContinueGame ( newGame, emitSound sounds.attack )
 
         HandleAnimationFrame delta ->
             let
@@ -290,11 +325,11 @@ update engineArgs msg model =
                     in
                     { obj | spriteAnimation = newAnimation }
 
-                handleEnemyAttack : Model -> Model
-                handleEnemyAttack oldModel =
+                handleEnemyAttack : Game -> Game
+                handleEnemyAttack oldGame =
                     let
                         enemy =
-                            oldModel.enemy
+                            oldGame.enemy
 
                         readyToAttack =
                             Meter.isFull enemy.energy
@@ -305,22 +340,22 @@ update engineArgs msg model =
                             drainEnergy oldEnemy =
                                 { enemy | energy = Meter.drain oldEnemy.energy }
                         in
-                        oldModel
+                        oldGame
                             |> damageRandomAlly (toFloat enemy.stats.damage)
                             |> updateEnemy drainEnergy
                             |> updateEnemy (updateEnemyEnergy delta)
 
                     else
-                        oldModel
+                        oldGame
                             |> updateEnemy (updateEnemyEnergy delta)
 
-                newModel =
-                    model
+                newGame =
+                    game
                         |> updateParty (Party.handleAnimationFrame delta)
                         |> handleEnemyAttack
                         |> updateEnemy updateAnimation
             in
-            ( newModel, Cmd.none )
+            ContinueGame ( newGame, Cmd.none )
 
 
 
@@ -329,7 +364,12 @@ update engineArgs msg model =
 
 keyDecoder : EngineArgs -> Model -> Decode.Decoder Msg
 keyDecoder engineArgs model =
-    Decode.map (toUserInput engineArgs model) (Decode.field "key" Decode.string)
+    case model of
+        GameInProgress game ->
+            Decode.map (toUserInput engineArgs game) (Decode.field "key" Decode.string)
+
+        _ ->
+            Decode.succeed NoOp
 
 
 tryAll : List (Maybe t) -> Maybe t
@@ -347,11 +387,11 @@ tryAll things =
                     tryAll rest
 
 
-toUserInput : EngineArgs -> Model -> String -> Msg
-toUserInput engineArgs model string =
+toUserInput : EngineArgs -> Game -> String -> Msg
+toUserInput engineArgs game string =
     let
         selectionInput =
-            Party.getSelected model.party
+            Party.getSelected game.party
                 |> Maybe.andThen
                     (\( selectedAlly, _ ) ->
                         toSelectedAllyInput selectedAlly.stats.move.inputs string
@@ -430,8 +470,8 @@ inputLabel =
     "py-1 px-2"
 
 
-renderTop : Model -> Html Msg
-renderTop model =
+renderTop : Game -> Html Msg
+renderTop game =
     let
         allyStatsContainer =
             "w-8"
@@ -446,7 +486,7 @@ renderTop model =
                     stats
 
                 isAnyAllySelected =
-                    model.party
+                    game.party
                         |> Party.getSelected
                         |> isJust
 
@@ -510,7 +550,7 @@ renderTop model =
 
         renderAllies =
             div [ class "border border-dashed h-full w-96 flex-col" ]
-                (model.party
+                (game.party
                     |> Party.toListWithSelectionStatus
                     |> List.indexedMap
                         (\index ( allySpot, isSelected ) ->
@@ -541,12 +581,12 @@ renderTop model =
     in
     div [ class "w-full h-full bg-blue-400 flex justify-between" ]
         [ renderAllies
-        , renderEnemy model.enemy
+        , renderEnemy game.enemy
         ]
 
 
-renderBottom : Model -> Html Msg
-renderBottom model =
+renderBottom : Game -> Html Msg
+renderBottom game =
     let
         renderPortrait : Party -> Html Msg
         renderPortrait party =
@@ -623,22 +663,35 @@ renderBottom model =
                     div [] []
     in
     div [ class "w-full h-full border-gray-500 border-4 bg-gray-400 flex items-center p-2 space-x-2" ]
-        [ renderPortrait <| model.party
-        , renderPrompt <| model.party
-        , renderMove <| model.party
-        , renderInputs <| model.party
+        [ renderPortrait <| game.party
+        , renderPrompt <| game.party
+        , renderMove <| game.party
+        , renderInputs <| game.party
         ]
 
 
 view : EngineArgs -> Model -> Html Msg
 view engineArgs model =
-    div [ class "bg-gray-900 w-screen h-screen flex items-center justify-center" ]
-        [ div
-            [ class "rounded border-gray-100 border-4"
-            , style "width" "64rem" -- i.e. w-256
-            , style "height" "42rem" -- i.e. h-168
-            ]
-            [ div [ class "w-full h-2/3" ] [ renderTop model ]
-            , div [ class "w-full h-1/3" ] [ renderBottom model ]
-            ]
-        ]
+    let
+        renderGame : Game -> Html Msg
+        renderGame game =
+            div [ class "bg-gray-900 w-screen h-screen flex items-center justify-center" ]
+                [ div
+                    [ class "rounded border-gray-100 border-4"
+                    , style "width" "64rem" -- i.e. w-256
+                    , style "height" "42rem" -- i.e. h-168
+                    ]
+                    [ div [ class "w-full h-2/3" ] [ renderTop game ]
+                    , div [ class "w-full h-1/3" ] [ renderBottom game ]
+                    ]
+                ]
+    in
+    case model of
+        GameInProgress game ->
+            renderGame game
+
+        GameLost game ->
+            renderGame game
+
+        GameWon game ->
+            renderGame game
