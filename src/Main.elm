@@ -9,14 +9,15 @@ allyOne =
     { avatarUrl = "thief_portrait.png"
     , battleUrl = "thief.png"
     , tombstoneUrl = "thief_tombstone.png"
-    , move =
-        { onSuccess = [ Ally.damage 5 ]
-        , prompt = "A quick jab, followed by a slash..."
-        , inputs =
-            [ ( 'j', "Jab" )
-            , ( 's', "Slash" )
-            ]
-        }
+    , moves =
+        [ { onSuccess = [ Ally.damage 5 ]
+          , prompt = "A quick jab, followed by a slash..."
+          , inputs =
+                [ ( 'j', "Jab" )
+                , ( 's', "Slash" )
+                ]
+          }
+        ]
     , maxHealth = 100
     , maxEnergy = 30
     }
@@ -27,15 +28,16 @@ allyTwo =
     { avatarUrl = "knight_portrait.png"
     , battleUrl = "knight.png"
     , tombstoneUrl = "knight_tombstone.png"
-    , move =
-        { onSuccess = [ Ally.damage 15 ]
-        , prompt = "Analyze the opponent's weak spots and then strike twice..."
-        , inputs =
-            [ ( 'a', "Analyze" )
-            , ( 's', "Strike" )
-            , ( 's', "Strike" )
-            ]
-        }
+    , moves =
+        [ { onSuccess = [ Ally.damage 15 ]
+          , prompt = "Analyze the opponent's weak spots and then strike twice..."
+          , inputs =
+                [ ( 'a', "Analyze" )
+                , ( 's', "Strike" )
+                , ( 's', "Strike" )
+                ]
+          }
+        ]
     , maxHealth = 100
     , maxEnergy = 100
     }
@@ -46,15 +48,16 @@ allyThree =
     { avatarUrl = "priest_portrait.png"
     , battleUrl = "priest.png"
     , tombstoneUrl = "priest_tombstone.png"
-    , move =
-        { onSuccess = [ Ally.damage 10 ]
-        , prompt = "Focus, determination, and then yell 'hoody hoo!'..."
-        , inputs =
-            [ ( 'f', "Focus" )
-            , ( 'd', "Determination" )
-            , ( 'h', "Hoody Hoo!" )
-            ]
-        }
+    , moves =
+        [ { onSuccess = [ Ally.damage 10 ]
+          , prompt = "Focus, determination, and then yell 'hoody hoo!'..."
+          , inputs =
+                [ ( 'f', "Focus" )
+                , ( 'd', "Determination" )
+                , ( 'h', "Hoody Hoo!" )
+                ]
+          }
+        ]
     , maxHealth = 100
     , maxEnergy = 85
     }

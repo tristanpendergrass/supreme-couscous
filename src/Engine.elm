@@ -249,7 +249,7 @@ updateGame engineArgs msg game =
                         nextInput =
                             let
                                 pattern =
-                                    selectedAlly.stats.move.inputs
+                                    selection.move.inputs
                             in
                             Utils.getNextInput pattern (List.reverse selection.liveInputs)
 
@@ -286,13 +286,13 @@ updateGame engineArgs msg game =
                     in
                     ContinueGame ( newGame, emitSound sounds.select )
 
-                Just selectedAlly ->
+                Just ( _, selection ) ->
                     let
                         applyOnSuccess : Game -> Game
                         applyOnSuccess oldGame =
                             let
                                 effects =
-                                    selectedAlly.stats.move.onSuccess
+                                    selection.move.onSuccess
 
                                 applyEffect : Ally.Effect -> Game -> Game
                                 applyEffect effect g =
@@ -411,8 +411,8 @@ toUserInput engineArgs game string =
         selectionInput =
             Party.getSelected game.party
                 |> Maybe.andThen
-                    (\( selectedAlly, _ ) ->
-                        toSelectedAllyInput selectedAlly.stats.move.inputs string
+                    (\( _, selection ) ->
+                        toSelectedAllyInput selection.move.inputs string
                     )
 
         result =
@@ -626,8 +626,8 @@ renderBottom game =
         renderPrompt party =
             div [ class "w-64 h-48" ]
                 [ case Party.getSelected party of
-                    Just ( selectedAlly, _ ) ->
-                        div [ class "italic" ] [ text selectedAlly.stats.move.prompt ]
+                    Just ( _, selection ) ->
+                        div [ class "italic" ] [ text selection.move.prompt ]
 
                     Nothing ->
                         div [] []
@@ -655,15 +655,15 @@ renderBottom game =
         renderMove party =
             div [ class "w-96 h-48 " ]
                 [ case Party.getSelected party of
-                    Just ( selectedAlly, _ ) ->
+                    Just ( _, selection ) ->
                         div [ class "h-full w-full flex-col" ]
                             [ div [ class "w-96 h-40" ]
-                                [ selectedAlly.stats.move.inputs
+                                [ selection.move.inputs
                                     |> List.Extra.unique
                                     |> List.map renderInput
                                     |> div [ class "flex space-x-2 flex-wrap" ]
                                 ]
-                            , div [ class "w-96 h-8" ] [ renderFinish selectedAlly.stats.move ]
+                            , div [ class "w-96 h-8" ] [ renderFinish selection.move ]
                             ]
 
                     Nothing ->

@@ -32,6 +32,7 @@ type alias Input =
 
 type alias Selection =
     { liveInputs : List Input
+    , move : Ally.Move
     }
 
 
@@ -257,13 +258,13 @@ handleAnimationFrame delta =
     mapAliveAllies (Ally.handleAnimationFrame delta)
 
 
-getSelectedAllyIfComplete : Party -> Maybe Ally
+getSelectedAllyIfComplete : Party -> Maybe ( Ally, Selection )
 getSelectedAllyIfComplete party =
     getSelected party
         |> Maybe.andThen
-            (\( selectedAlly, { liveInputs } ) ->
-                if Utils.isPatternComplete selectedAlly.stats.move.inputs (List.reverse liveInputs) then
-                    Just selectedAlly
+            (\( selectedAlly, selection ) ->
+                if Utils.isPatternComplete selection.move.inputs (List.reverse selection.liveInputs) then
+                    Just ( selectedAlly, selection )
 
                 else
                     Nothing
@@ -272,34 +273,27 @@ getSelectedAllyIfComplete party =
 
 selectPosition : Int -> Party -> Maybe Party
 selectPosition index party =
-    let
-        allyHasEnergy =
-            getLiveAllyAt index party
-                |> Maybe.map (.energy >> Meter.isFull)
-                |> Maybe.withDefault False
-    in
-    if allyHasEnergy then
-        let
-            list =
-                toList party
+    getLiveAllyAt index party
+        |> Maybe.andThen
+            (\ally ->
+                List.head ally.stats.moves
+                    |> Maybe.andThen
+                        (\move ->
+                            if Meter.isFull ally.energy then
+                                let
+                                    list =
+                                        toList party
 
-            initialData : Selection
-            initialData =
-                { liveInputs = [] }
-        in
-        List.Extra.getAt index list
-            |> Maybe.andThen
-                (\allySpot ->
-                    case allySpot of
-                        DeadAlly _ ->
-                            Nothing
+                                    initialData : Selection
+                                    initialData =
+                                        { liveInputs = [], move = move }
+                                in
+                                Just (Party (List.take index list) (Just ( ally, initialData )) (List.drop (index + 1) list))
 
-                        AliveAlly selectedAlly ->
-                            Just (Party (List.take index list) (Just ( selectedAlly, initialData )) (List.drop (index + 1) list))
-                )
-
-    else
-        Nothing
+                            else
+                                Nothing
+                        )
+            )
 
 
 isEveryoneDead : Party -> Bool
