@@ -15,3 +15,17 @@ This command builds files in the /docs directory. If hosting on github pages, co
 ```
 $ npm run build
 ```
+
+# Roadmap
+
+Improve look and feel of simple moves
+[ ] Support multiple moves per ally, randomly chosen
+[ ] Allow inputs to be shown that aren't part of recipe
+[ ] Change recipes to approximately match simple CSD foods
+[ ] Inputs should be disabled after being selected once
+[ ] Inputs should "flash" before being disabled when selected to give tactile feedback to player
+[ ] Design "quality" measure affected by accuracy
+
+Add more advanced moves
+
+Add dodging or some sort of enemy interaction
