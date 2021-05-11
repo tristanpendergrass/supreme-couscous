@@ -463,10 +463,15 @@ toGlobalUserInput string =
 
 subscriptions : EngineArgs -> Model -> Sub Msg
 subscriptions engineArgs model =
-    Sub.batch
-        [ Browser.Events.onKeyUp (keyDecoder engineArgs model)
-        , Browser.Events.onAnimationFrameDelta HandleAnimationFrame
-        ]
+    case model of
+        GameInProgress _ ->
+            Sub.batch
+                [ Browser.Events.onKeyUp (keyDecoder engineArgs model)
+                , Browser.Events.onAnimationFrameDelta HandleAnimationFrame
+                ]
+
+        _ ->
+            Sub.none
 
 
 

@@ -10,7 +10,7 @@ allyOne =
     , battleUrl = "thief.png"
     , tombstoneUrl = "thief_tombstone.png"
     , move =
-        { onSuccess = [ Ally.damage 10 ]
+        { onSuccess = [ Ally.damage 5 ]
         , prompt = "A quick jab, followed by a slash..."
         , inputs =
             [ ( 'j', "Jab" )
@@ -18,7 +18,7 @@ allyOne =
             ]
         }
     , maxHealth = 100
-    , maxEnergy = 75
+    , maxEnergy = 30
     }
 
 
@@ -28,7 +28,7 @@ allyTwo =
     , battleUrl = "knight.png"
     , tombstoneUrl = "knight_tombstone.png"
     , move =
-        { onSuccess = [ Ally.damage 5 ]
+        { onSuccess = [ Ally.damage 15 ]
         , prompt = "Analyze the opponent's weak spots and then strike twice..."
         , inputs =
             [ ( 'a', "Analyze" )
@@ -47,7 +47,7 @@ allyThree =
     , battleUrl = "priest.png"
     , tombstoneUrl = "priest_tombstone.png"
     , move =
-        { onSuccess = [ Ally.damage 20 ]
+        { onSuccess = [ Ally.damage 10 ]
         , prompt = "Focus, determination, and then yell 'hoody hoo!'..."
         , inputs =
             [ ( 'f', "Focus" )
@@ -56,13 +56,13 @@ allyThree =
             ]
         }
     , maxHealth = 100
-    , maxEnergy = 175
+    , maxEnergy = 85
     }
 
 
 enemy : Engine.EngineArgEnemy
 enemy =
-    { battleUrl = "red_boy.png", maxHealth = 10, maxEnergy = 50, damage = 1 }
+    { battleUrl = "red_boy.png", maxHealth = 80, maxEnergy = 30, damage = 25 }
 
 
 main : Engine.Instance
