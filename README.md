@@ -20,7 +20,7 @@ $ npm run build
 
 Improve look and feel of simple moves
 [x] Support multiple moves per ally
-[ ] Randomly choose between moves
+[x] Randomly choose between moves
 [ ] Allow inputs to be shown that aren't part of recipe
 [ ] Change recipes to approximately match simple CSD foods
 [ ] Inputs should be disabled after being selected once

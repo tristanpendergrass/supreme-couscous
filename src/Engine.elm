@@ -228,15 +228,15 @@ updateGame engineArgs msg game =
                     ContinueGame ( newGame, Cmd.none )
 
                 Just position ->
-                    case Party.selectPosition position game.party of
+                    case Party.selectPosition game.seed position game.party of
                         Nothing ->
                             -- TODO: sound effect?
                             noOp
 
-                        Just newParty ->
+                        Just ( newParty, newSeed ) ->
                             let
                                 newGame =
-                                    { game | party = newParty }
+                                    { game | party = newParty, seed = newSeed }
                             in
                             ContinueGame ( newGame, emitSound sounds.select )
 

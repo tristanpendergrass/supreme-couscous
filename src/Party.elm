@@ -271,28 +271,40 @@ getSelectedAllyIfComplete party =
             )
 
 
-selectPosition : Int -> Party -> Maybe Party
-selectPosition index party =
+getRandomPosition : Party -> Maybe (Random.Generator Int)
+getRandomPosition party =
+    Debug.todo "Implement getRandomPosition"
+
+
+selectPosition : Random.Seed -> Int -> Party -> Maybe ( Party, Random.Seed )
+selectPosition seed index party =
     getLiveAllyAt index party
         |> Maybe.andThen
             (\ally ->
-                List.head ally.stats.moves
-                    |> Maybe.andThen
-                        (\move ->
-                            if Meter.isFull ally.energy then
-                                let
-                                    list =
-                                        toList party
+                if Meter.isFull ally.energy then
+                    case ally.stats.moves of
+                        [] ->
+                            Nothing
 
-                                    initialData : Selection
-                                    initialData =
-                                        { liveInputs = [], move = move }
-                                in
-                                Just (Party (List.take index list) (Just ( ally, initialData )) (List.drop (index + 1) list))
+                        first :: rest ->
+                            let
+                                ( move, newSeed ) =
+                                    Random.step (Random.uniform first rest) seed
 
-                            else
-                                Nothing
-                        )
+                                list =
+                                    toList party
+
+                                initialData : Selection
+                                initialData =
+                                    { liveInputs = [], move = move }
+
+                                newParty =
+                                    Party (List.take index list) (Just ( ally, initialData )) (List.drop (index + 1) list)
+                            in
+                            Just ( newParty, newSeed )
+
+                else
+                    Nothing
             )
 
 
