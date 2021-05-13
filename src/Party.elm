@@ -263,7 +263,7 @@ getSelectedAllyIfComplete party =
     getSelected party
         |> Maybe.andThen
             (\( selectedAlly, selection ) ->
-                if Utils.isPatternComplete selection.move.inputs (List.reverse selection.liveInputs) then
+                if Utils.isPatternComplete selection.move.recipe (List.reverse selection.liveInputs) then
                     Just ( selectedAlly, selection )
 
                 else

@@ -25,6 +25,7 @@ type Effect
 type alias Move =
     { onSuccess : List Effect
     , prompt : String
+    , recipe : List Input
     , inputs : List Input
     }
 

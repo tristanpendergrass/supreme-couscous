@@ -12,6 +12,10 @@ allyOne =
     , moves =
         [ { onSuccess = [ Ally.damage 5 ]
           , prompt = "A quick jab, followed by a slash..."
+          , recipe =
+                [ ( 'j', "Jab" )
+                , ( 's', "Slash" )
+                ]
           , inputs =
                 [ ( 'j', "Jab" )
                 , ( 's', "Slash" )
@@ -31,9 +35,13 @@ allyTwo =
     , moves =
         [ { onSuccess = [ Ally.damage 15 ]
           , prompt = "Analyze the opponent's weak spots and then strike twice..."
-          , inputs =
+          , recipe =
                 [ ( 'a', "Analyze" )
                 , ( 's', "Strike" )
+                , ( 's', "Strike" )
+                ]
+          , inputs =
+                [ ( 'a', "Analyze" )
                 , ( 's', "Strike" )
                 ]
           }
@@ -51,6 +59,11 @@ allyThree =
     , moves =
         [ { onSuccess = [ Ally.damage 10 ]
           , prompt = "Focus, determination, and then yell 'hoody hoo!'..."
+          , recipe =
+                [ ( 'f', "Focus" )
+                , ( 'd', "Determination" )
+                , ( 'h', "Hoody Hoo!" )
+                ]
           , inputs =
                 [ ( 'f', "Focus" )
                 , ( 'd', "Determination" )

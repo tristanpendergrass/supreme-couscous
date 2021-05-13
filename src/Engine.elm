@@ -249,7 +249,7 @@ updateGame engineArgs msg game =
                         nextInput =
                             let
                                 pattern =
-                                    selection.move.inputs
+                                    selection.move.recipe
                             in
                             Utils.getNextInput pattern (List.reverse selection.liveInputs)
 
@@ -412,7 +412,7 @@ toUserInput engineArgs game string =
             Party.getSelected game.party
                 |> Maybe.andThen
                     (\( _, selection ) ->
-                        toSelectedAllyInput selection.move.inputs string
+                        toSelectedAllyInput selection.move.recipe string
                     )
 
         result =
@@ -659,7 +659,6 @@ renderBottom game =
                         div [ class "h-full w-full flex-col" ]
                             [ div [ class "w-96 h-40" ]
                                 [ selection.move.inputs
-                                    |> List.Extra.unique
                                     |> List.map renderInput
                                     |> div [ class "flex space-x-2 flex-wrap" ]
                                 ]
