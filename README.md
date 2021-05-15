@@ -18,15 +18,15 @@ $ npm run build
 
 # Roadmap
 
-Improve look and feel of simple moves
+## Improve look and feel of simple moves
+
 [x] Support multiple moves per ally
 [x] Randomly choose between moves
 [x] Allow inputs to be shown that aren't part of recipe
-[ ] Change recipes to approximately match simple CSD foods
 [ ] Inputs should be disabled after being selected once
 [ ] Inputs should "flash" before being disabled when selected to give tactile feedback to player
-[ ] Design "quality" measure affected by accuracy
+[ ] Change recipes to approximately match simple CSD foods
 
-Add more advanced moves
+## Add more advanced moves
 
-Add dodging or some sort of enemy interaction
+## Add dodging or some sort of enemy interaction
