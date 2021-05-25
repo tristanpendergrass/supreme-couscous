@@ -27,6 +27,4 @@ $ npm run build
 [ ] Inputs should "flash" before being disabled when selected to give tactile feedback to player
 [ ] Change recipes to approximately match simple CSD foods
 
-## Add more advanced moves
-
 ## Add dodging or some sort of enemy interaction

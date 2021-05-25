@@ -52,3 +52,19 @@ There are two primary axis along which the player can perform better or worse:
 1. How quickly and reliably the player dispatches commands to their team. This is largely a matter of muscle memory, although there will be large gulfs in player aptitude, even after playing for a long time. Players that have low skill in this dimension should generally be facing a fun but manageable challenge with a team of all simple characters plus one complex one. Players of intermediate skill should well handle teams with more complex characters, and masters of this axis should almost but not quite be able to get the full potential from a team of complex characters.
 
 2. Metagame strategy. Choosing the right upgrades and team composition. Decisions about team comp look a lot like they do in TFT.
+
+## Dodging
+
+When a dodge is maximally successful it should result in 50% damage mitigation. We want this to feel like a full success-- use whatever visual clues are necessary to drive that home. There are a few reasons for this:
+
+- Even when effectively blocking, healing should still feel relevant
+- More knobs to turn on balance-- you can make the dodge harder or increase the damage.
+- The ability to completely block damage can be reserved as a cool reward or rarer upgrade that will feel very impactful. There's going to be a significant psychological impact to "zero" as in complete damage mitigation and it would be nice if that weren't the everyday scenario when you blocked.
+
+Dodging patterns should derive from the monster you're fighting, not from the ally doing the blocking. Allies already feel very different from each other because they have their own moves with different patterns. The enemies also need to feel different from each other, and not just interchangeable punching bags of varying health pools.
+
+## Enemy ideas
+
+- An aggressive but squishy enemy that makes lots of smaller attacks.
+- A tanky enemy. It would have a vast health pool, non-threatening attacks, and charge a large unblockable hit. This will feel like a damage check and rewards high damage comps.
+- An enemy that rewards timing your attacks correctly. They deploy a shield blocking percent of damage periodically.
