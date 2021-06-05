@@ -18,6 +18,10 @@ $ npm run build
 
 # Roadmap
 
+## Refactor action system
+
+[ ]
+
 ## Improve look and feel of simple moves
 
 [x] Support multiple moves per ally

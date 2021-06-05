@@ -1,5 +1,6 @@
 port module Engine exposing (EngineArgEnemy, Instance, create)
 
+import ActionList exposing (ActionList)
 import Ally exposing (Ally)
 import Animation exposing (Animation)
 import Browser
@@ -10,8 +11,9 @@ import Html.Events exposing (onClick)
 import Json.Decode as Decode
 import List.Extra
 import Meter exposing (Meter)
-import Party exposing (Party, Selection)
+import Party exposing (Party)
 import Random
+import SelectionList exposing (SelectionList)
 import Utils
 
 
@@ -74,6 +76,12 @@ addInputToSelection input selection =
     { selection | liveInputs = input :: selection.liveInputs }
 
 
+type alias Selection =
+    { liveInputs : List Input
+    , move : Ally.Move
+    }
+
+
 type alias Enemy =
     { stats : EngineArgEnemy
     , health : Meter
@@ -82,10 +90,16 @@ type alias Enemy =
     }
 
 
+type Action
+    = AllyMove
+    | EnemyMove
+
+
 type alias Game =
     { seed : Random.Seed
     , party : Party
     , enemy : Enemy
+    , actions : SelectionList Action Selection
     }
 
 
@@ -98,6 +112,7 @@ type Model
 init : EngineArgs -> () -> ( Model, Cmd Msg )
 init engineArgs _ =
     let
+        initialParty : Party
         initialParty =
             engineArgs.initialParty
                 |> List.map Ally.create
@@ -110,11 +125,16 @@ init engineArgs _ =
             , energy = Meter.create (toFloat engineArgs.initialEnemy.maxEnergy) |> Meter.drain
             , spriteAnimation = Nothing
             }
+
+        initialActions : SelectionList Action Selection
+        initialActions =
+            SelectionList.create
     in
     ( GameInProgress
         { seed = Random.initialSeed 0
         , party = initialParty
         , enemy = initialEnemy
+        , actions = initialActions
         }
     , Cmd.none
     )
@@ -129,7 +149,8 @@ port emitSound : String -> Cmd msg
 
 type Msg
     = NoOp
-    | SelectAlly (Maybe Int)
+    | SelectAction Int
+    | DeselectAction
     | Input Input
     | Finish
     | HandleAnimationFrame Float
@@ -140,13 +161,9 @@ updateParty updateFn game =
     { game | party = updateFn game.party }
 
 
-damageRandomAlly : Float -> Game -> Game
-damageRandomAlly damageAmount game =
-    let
-        ( newParty, newSeed ) =
-            Random.step (Party.damageRandomMember damageAmount game.party) game.seed
-    in
-    { game | seed = newSeed, party = newParty }
+updateActions : (SelectionList Action Selection -> SelectionList Action Selection) -> Game -> Game
+updateActions updateFn game =
+    { game | actions = updateFn game.actions }
 
 
 dealDamageToEnemy : Int -> Game -> Game
@@ -216,34 +233,31 @@ updateGame engineArgs msg game =
         NoOp ->
             noOp
 
-        SelectAlly maybePosition ->
-            case maybePosition of
-                Nothing ->
-                    -- Deselection
+        DeselectAction ->
+            let
+                newGame =
+                    game
+                        |> updateActions SelectionList.clearSelection
+            in
+            ContinueGame ( newGame, Cmd.none )
+
+        SelectAction position ->
+            case SelectionList.select position game.actions of
+                Err _ ->
+                    -- TODO: sound effect?
+                    noOp
+
+                Ok newActions ->
                     let
                         newGame =
-                            game
-                                |> updateParty Party.clearSelection
+                            { game | actions = newActions }
                     in
-                    ContinueGame ( newGame, Cmd.none )
-
-                Just position ->
-                    case Party.selectPosition game.seed position game.party of
-                        Nothing ->
-                            -- TODO: sound effect?
-                            noOp
-
-                        Just ( newParty, newSeed ) ->
-                            let
-                                newGame =
-                                    { game | party = newParty, seed = newSeed }
-                            in
-                            ContinueGame ( newGame, emitSound sounds.select )
+                    ContinueGame ( newGame, emitSound sounds.select )
 
         Input input ->
             let
-                updateInputs : ( Ally, Selection ) -> ( Ally, Selection )
-                updateInputs ( selectedAlly, selection ) =
+                updateInputs : Selection -> Selection
+                updateInputs selection =
                     let
                         nextInput : Maybe Input
                         nextInput =
@@ -259,74 +273,74 @@ updateGame engineArgs msg game =
                                 |> Maybe.withDefault False
                     in
                     if inputMatches then
-                        ( selectedAlly, addInputToSelection input selection )
+                        addInputToSelection input selection
 
                     else
-                        ( selectedAlly, selection )
+                        selection
             in
-            case Party.mapSelection updateInputs game.party of
+            case SelectionList.mapSelection updateInputs game.actions of
                 Err _ ->
                     noOp
 
-                Ok newParty ->
+                Ok newActions ->
                     let
                         newGame =
-                            { game | party = newParty }
+                            { game | actions = newActions }
                     in
                     ContinueGame ( newGame, emitSound sounds.attack )
 
         Finish ->
-            case Party.getSelectedAllyIfComplete game.party of
-                Nothing ->
-                    -- Finish was called without a completed pattern for a selected ally
-                    let
-                        newGame =
-                            game
-                                |> updateParty Party.clearSelection
-                    in
-                    ContinueGame ( newGame, emitSound sounds.select )
+            case SelectionList.getSelected game.actions of
+                Err _ ->
+                    -- Should not be reachable
+                    noOp
 
-                Just ( _, selection ) ->
-                    let
-                        applyOnSuccess : Game -> Game
-                        applyOnSuccess oldGame =
-                            let
-                                effects =
-                                    selection.move.onSuccess
+                Ok ( selectedAlly, selection ) ->
+                    if Utils.isPatternComplete selection.move.recipe (List.reverse selection.liveInputs) then
+                        let
+                            applyOnSuccess : Game -> Game
+                            applyOnSuccess oldGame =
+                                let
+                                    effects =
+                                        selection.move.onSuccess
 
-                                applyEffect : Ally.Effect -> Game -> Game
-                                applyEffect effect g =
-                                    case effect of
-                                        Ally.Damage amount ->
-                                            dealDamageToEnemy amount g
-                            in
-                            List.foldl applyEffect oldGame effects
+                                    applyEffect : Ally.Effect -> Game -> Game
+                                    applyEffect effect g =
+                                        case effect of
+                                            Ally.Damage amount ->
+                                                dealDamageToEnemy amount g
+                                in
+                                List.foldl applyEffect oldGame effects
 
-                        drainMeter : Ally -> Ally
-                        drainMeter ally =
-                            { ally | energy = Meter.drain ally.energy }
+                            drainMeter : Ally -> Ally
+                            drainMeter ally =
+                                { ally | energy = Meter.drain ally.energy }
 
-                        updateEnergy : Party -> Party
-                        updateEnergy party =
-                            party
-                                |> Party.mapSelection
-                                    (\( ally, selectionData ) ->
-                                        ( drainMeter ally, selectionData )
-                                    )
-                                |> Result.withDefault party
+                            updateEnergy : Party -> Party
+                            updateEnergy =
+                                Debug.todo "Implement updateEnergy"
 
-                        newGame =
-                            game
-                                |> applyOnSuccess
-                                |> updateParty updateEnergy
-                                |> updateParty Party.clearSelection
-                                |> updateEnemy (\enemy -> { enemy | spriteAnimation = Just <| Animation.create Animation.Shake })
-                    in
-                    if isGameWon newGame then
-                        PlayerWon ( newGame, emitSound sounds.attack )
+                            newGame =
+                                game
+                                    |> applyOnSuccess
+                                    |> updateParty updateEnergy
+                                    |> updateActions SelectionList.clearSelection
+                                    |> updateEnemy (\enemy -> { enemy | spriteAnimation = Just <| Animation.create Animation.Shake })
+                        in
+                        if isGameWon newGame then
+                            PlayerWon ( newGame, emitSound sounds.attack )
+
+                        else
+                            ContinueGame ( newGame, emitSound sounds.attack )
 
                     else
-                        ContinueGame ( newGame, emitSound sounds.attack )
+                        -- Finish was called without a completed pattern for a selected ally
+                        let
+                            newGame =
+                                game
+                                    |> updateActions SelectionList.clearSelection
+                        in
+                        ContinueGame ( newGame, emitSound sounds.select )
 
         HandleAnimationFrame delta ->
             let
@@ -355,7 +369,8 @@ updateGame engineArgs msg game =
                                 { enemy | energy = Meter.drain oldEnemy.energy }
                         in
                         oldGame
-                            |> damageRandomAlly (toFloat enemy.stats.damage)
+                            |> Debug.todo "Implement enemy attack"
+                            -- |> damageRandomAlly (toFloat enemy.stats.damage)
                             |> updateEnemy drainEnergy
                             |> updateEnemy (updateEnemyEnergy delta)
 
@@ -409,11 +424,12 @@ toUserInput : EngineArgs -> Game -> String -> Msg
 toUserInput engineArgs game string =
     let
         selectionInput =
-            Party.getSelected game.party
-                |> Maybe.andThen
-                    (\( _, selection ) ->
-                        toSelectedAllyInput selection.move.recipe string
-                    )
+            -- SelectionList.getSelected game.actions
+            --     |> Result.andThen
+            --         (\( _, selection ) ->
+            --             toSelectedAllyInput selection.move.recipe string
+            --         )
+            Debug.todo "Implement selectionInput"
 
         result =
             tryAll
@@ -440,19 +456,19 @@ toGlobalUserInput : String -> Maybe Msg
 toGlobalUserInput string =
     case string of
         "1" ->
-            Just (SelectAlly (Just 0))
+            Just (SelectAction 0)
 
         "2" ->
-            Just (SelectAlly (Just 1))
+            Just (SelectAction 1)
 
         "3" ->
-            Just (SelectAlly (Just 2))
+            Just (SelectAction 2)
 
         "Escape" ->
-            Just (SelectAlly Nothing)
+            Just DeselectAction
 
         "q" ->
-            Just (SelectAlly Nothing)
+            Just DeselectAction
 
         "Enter" ->
             Just Finish
@@ -499,23 +515,14 @@ renderTop game =
         allyStatsContainer =
             "w-8"
 
-        renderAliveAlly : Bool -> Ally -> Msg -> Int -> Html Msg
-        renderAliveAlly isSelected ally selectionMsg index =
+        renderAliveAlly : Ally -> Html Msg
+        renderAliveAlly ally =
             let
-                { stats, health, energy } =
+                { stats, energy } =
                     ally
 
                 { battleUrl } =
                     stats
-
-                isAnyAllySelected =
-                    game.party
-                        |> Party.getSelected
-                        |> isJust
-
-                allyCanBeSelected =
-                    not isAnyAllySelected
-                        && Meter.isFull ally.energy
 
                 allyStats =
                     div [ class allyStatsContainer, class "flex space-x-1" ]
@@ -523,40 +530,15 @@ renderTop game =
                             |> Meter.setColor Meter.Blue
                             |> Meter.setDisplaySize 75
                             |> Meter.renderVertical
-                        , health
-                            |> Meter.setDisplaySize 75
-                            |> Meter.renderVertical
                         ]
 
                 allyImage =
                     div [ class "relative" ]
                         [ img [ class "w-24 h-24", class (Animation.classForAnimation ally.spriteAnimation), src battleUrl ] []
-                        , if isSelected then
-                            img [ class "absolute inline-block w-24 h-24 top-0 left-0", src images.battleSelection ] []
-
-                          else
-                            div [] []
-                        ]
-
-                allySelector =
-                    div
-                        [ class inputContainer
-                        , class <|
-                            if allyCanBeSelected then
-                                ""
-
-                            else
-                                "invisible"
-                        , onClick selectionMsg
-                        ]
-                        [ div [ class inputTrigger ] [ text <| String.fromInt (index + 1) ]
-                        , div [ class inputLabel ] [ text "Select" ]
                         ]
             in
             div [ class "flex-col space-y-2" ]
-                [ div [ class "flex w-full justify-center" ]
-                    [ allySelector ]
-                , div [ class "flex items-end space-x-2" ]
+                [ div [ class "flex items-end space-x-2" ]
                     [ div [ class "mb-2" ] [ allyStats ], allyImage ]
                 ]
 
@@ -574,15 +556,14 @@ renderTop game =
         renderAllies =
             div [ class "border border-dashed h-full w-96 flex-col" ]
                 (game.party
-                    |> Party.toListWithSelectionStatus
-                    |> List.indexedMap
-                        (\index ( allySpot, isSelected ) ->
+                    |> Party.map
+                        (\allySpot ->
                             div [ class "w-full h-1/3 flex items-center" ]
                                 [ div
                                     [ class "ml-4" ]
                                     [ case allySpot of
                                         Party.AliveAlly ally ->
-                                            renderAliveAlly isSelected ally (SelectAlly (Just index)) index
+                                            renderAliveAlly ally
 
                                         Party.DeadAlly stats ->
                                             renderDeadAlly stats
@@ -610,86 +591,82 @@ renderTop game =
 
 renderBottom : Game -> Html Msg
 renderBottom game =
-    let
-        renderPortrait : Party -> Html Msg
-        renderPortrait party =
-            div [ class "overflow-hidden w-48 h-48 relative" ]
-                [ case Party.getSelected party of
-                    Just ( selectedAlly, _ ) ->
-                        div [ class "bg-blue-200 border-4 border-gray-900" ] [ img [ src selectedAlly.stats.avatarUrl, class "bg-blue-200" ] [] ]
+    Debug.todo "Implement renderBottom"
 
-                    Nothing ->
-                        div [] []
-                ]
 
-        renderPrompt : Party -> Html Msg
-        renderPrompt party =
-            div [ class "w-64 h-48" ]
-                [ case Party.getSelected party of
-                    Just ( _, selection ) ->
-                        div [ class "italic" ] [ text selection.move.prompt ]
 
-                    Nothing ->
-                        div [] []
-                ]
-
-        renderInput : Input -> Html Msg
-        renderInput input =
-            let
-                ( trigger, name ) =
-                    input
-            in
-            button [ class inputContainer, onClick (Input input) ]
-                [ div [ class inputTrigger ] [ text <| String.fromChar trigger ]
-                , div [ class inputLabel ] [ text name ]
-                ]
-
-        renderFinish : Ally.Move -> Html Msg
-        renderFinish _ =
-            button [ class inputContainer, onClick Finish ]
-                [ div [ class inputTrigger ] [ text "Enter" ]
-                , div [ class inputLabel ] [ text "Finish" ]
-                ]
-
-        renderMove : Party -> Html Msg
-        renderMove party =
-            div [ class "w-96 h-48 " ]
-                [ case Party.getSelected party of
-                    Just ( _, selection ) ->
-                        div [ class "h-full w-full flex-col" ]
-                            [ div [ class "w-96 h-40" ]
-                                [ selection.move.inputs
-                                    |> List.map renderInput
-                                    |> div [ class "flex space-x-2 flex-wrap" ]
-                                ]
-                            , div [ class "w-96 h-8" ] [ renderFinish selection.move ]
-                            ]
-
-                    Nothing ->
-                        div [] []
-                ]
-
-        renderLiveInput : Input -> Html Msg
-        renderLiveInput ( _, move ) =
-            div [] [ text move ]
-
-        renderInputs : Party -> Html Msg
-        renderInputs party =
-            case Party.getSelected party of
-                Just ( _, { liveInputs } ) ->
-                    div [ class "flex-grow h-48 border border-gray-900" ]
-                        [ div [ class "flex-col" ] (List.map renderLiveInput liveInputs)
-                        ]
-
-                Nothing ->
-                    div [] []
-    in
-    div [ class "w-full h-full border-gray-500 border-4 bg-gray-400 flex items-center p-2 space-x-2" ]
-        [ renderPortrait <| game.party
-        , renderPrompt <| game.party
-        , renderMove <| game.party
-        , renderInputs <| game.party
-        ]
+-- All this commented out code should be part of a render bottom only if an ally action is selected. Need to fork
+-- to another view if it's an enemy dodge probably
+-- let
+--     renderPortrait : Party -> Html Msg
+--     renderPortrait party =
+--         div [ class "overflow-hidden w-48 h-48 relative" ]
+--             [ case SelectionList.getSelected game.actions of
+--                 Ok ( action, _ ) ->
+--                     div [ class "bg-blue-200 border-4 border-gray-900" ] [ img [ src action.stats.avatarUrl, class "bg-blue-200" ] [] ]
+--                 Err _ ->
+--                     div [] []
+--             ]
+--     renderPrompt : Game -> Html Msg
+--     renderPrompt game =
+--         div [ class "w-64 h-48" ]
+--             [ case SelectionList.getSelected game.actions of
+--                 Ok ( _, selection ) ->
+--                     div [ class "italic" ] [ text selection.move.prompt ]
+--                 Err _ ->
+--                     div [] []
+--             ]
+--     renderInput : Input -> Html Msg
+--     renderInput input =
+--         let
+--             ( trigger, name ) =
+--                 input
+--         in
+--         button [ class inputContainer, onClick (Input input) ]
+--             [ div [ class inputTrigger ] [ text <| String.fromChar trigger ]
+--             , div [ class inputLabel ] [ text name ]
+--             ]
+--     renderFinish : Ally.Move -> Html Msg
+--     renderFinish _ =
+--         button [ class inputContainer, onClick Finish ]
+--             [ div [ class inputTrigger ] [ text "Enter" ]
+--             , div [ class inputLabel ] [ text "Finish" ]
+--             ]
+--     renderMove : Party -> Html Msg
+--     renderMove party =
+--         div [ class "w-96 h-48 " ]
+--             [ case Party.getSelected party of
+--                 Just ( _, selection ) ->
+--                     div [ class "h-full w-full flex-col" ]
+--                         [ div [ class "w-96 h-40" ]
+--                             [ selection.move.inputs
+--                                 |> List.map renderInput
+--                                 |> div [ class "flex space-x-2 flex-wrap" ]
+--                             ]
+--                         , div [ class "w-96 h-8" ] [ renderFinish selection.move ]
+--                         ]
+--                 Nothing ->
+--                     div [] []
+--             ]
+--     renderLiveInput : Input -> Html Msg
+--     renderLiveInput ( _, move ) =
+--         div [] [ text move ]
+--     renderInputs : Party -> Html Msg
+--     renderInputs party =
+--         case Party.getSelected party of
+--             Just ( _, { liveInputs } ) ->
+--                 div [ class "flex-grow h-48 border border-gray-900" ]
+--                     [ div [ class "flex-col" ] (List.map renderLiveInput liveInputs)
+--                     ]
+--             Nothing ->
+--                 div [] []
+-- in
+-- div [ class "w-full h-full border-gray-500 border-4 bg-gray-400 flex items-center p-2 space-x-2" ]
+--     [ renderPortrait <| game.party
+--     , renderPrompt <| game.party
+--     , renderMove <| game.party
+--     , renderInputs <| game.party
+--     ]
 
 
 view : EngineArgs -> Model -> Html Msg
