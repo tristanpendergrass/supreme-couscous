@@ -11,44 +11,47 @@ import List.Extra
 
 
 type SelectionList t d
-    = SelectionList (List (Maybe t)) (Maybe ( t, d )) (List (Maybe t))
+    = HasSelection Int (List (Maybe t)) ( t, d ) (List (Maybe t))
+    | NoSelection Int (List (Maybe t))
 
 
-create : SelectionList t d
-create =
-    SelectionList [] Nothing []
+create : Int -> SelectionList t d
+create length =
+    NoSelection length (List.repeat length Nothing)
 
 
 clearSelection : SelectionList t d -> SelectionList t d
-clearSelection =
-    toList >> fromList
+clearSelection list =
+    case list of
+        NoSelection _ _ ->
+            list
+
+        HasSelection length first ( el, _ ) second ->
+            NoSelection length (List.concat [ first, [ Just el ], second ])
 
 
-toList : SelectionList t d -> List (Maybe t)
-toList (SelectionList first maybeEl second) =
-    case maybeEl of
-        Nothing ->
-            List.concat
-                [ first, second ]
+getLength : SelectionList t d -> Int
+getLength selectionList =
+    case selectionList of
+        NoSelection length _ ->
+            length
 
-        Just ( el, _ ) ->
-            List.concat
-                [ first, [ Just el ], second ]
-
-
-fromList : List (Maybe t) -> SelectionList t d
-fromList list =
-    SelectionList list Nothing []
+        HasSelection length _ _ _ ->
+            length
 
 
 select : d -> Int -> SelectionList t d -> Result String (SelectionList t d)
 select initialData index selectionList =
     let
-        list : List (Maybe t)
         list =
-            toList selectionList
+            case selectionList of
+                NoSelection _ list_ ->
+                    list_
 
-        first =
+                HasSelection _ first ( el, _ ) second ->
+                    List.concat [ first, [ Just el ], second ]
+
+        newFirst =
             List.take index list
 
         maybeEl : Maybe ( t, d )
@@ -60,31 +63,36 @@ select initialData index selectionList =
                 _ ->
                     Nothing
 
-        second =
+        newSecond =
             List.drop index list
     in
     if index < List.length list then
-        Ok (SelectionList first maybeEl second)
+        case maybeEl of
+            Nothing ->
+                Err "Trying to select Nothing"
+
+            Just newSelection ->
+                Ok (HasSelection (getLength selectionList) newFirst newSelection newSecond)
 
     else
         Err "Index is out of bounds"
 
 
 mapSelection : (t -> d -> d) -> SelectionList t d -> Result String (SelectionList t d)
-mapSelection fn (SelectionList first maybeEl second) =
-    case maybeEl of
-        Nothing ->
-            Err "Index is out of bounds"
+mapSelection fn selectionList =
+    case selectionList of
+        NoSelection _ _ ->
+            Err "Nothing is selected"
 
-        Just ( el, data ) ->
-            Ok <| SelectionList first (Just ( el, fn el data )) second
+        HasSelection length first ( el, data ) second ->
+            Ok <| HasSelection length first ( el, fn el data ) second
 
 
 getSelected : SelectionList t d -> Result String ( t, d )
-getSelected (SelectionList _ maybeEl _) =
-    case maybeEl of
-        Nothing ->
-            Err "Index is out of bounds"
+getSelected selectionList =
+    case selectionList of
+        NoSelection _ _ ->
+            Err "Nothing is selected"
 
-        Just ( el, data ) ->
-            Ok <| ( el, data )
+        HasSelection _ _ selection _ ->
+            Ok selection
