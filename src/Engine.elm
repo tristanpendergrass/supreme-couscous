@@ -78,7 +78,6 @@ addInputToSelection input selection =
 
 type alias Selection =
     { liveInputs : List Input
-    , move : Ally.Move
     }
 
 
@@ -91,7 +90,7 @@ type alias Enemy =
 
 
 type Action
-    = AllyMove
+    = AllyMove Ally.Move
     | EnemyMove
 
 
@@ -100,6 +99,7 @@ type alias Game =
     , party : Party
     , enemy : Enemy
     , actions : SelectionList Action Selection
+    , health : Meter
     }
 
 
@@ -135,6 +135,7 @@ init engineArgs _ =
         , party = initialParty
         , enemy = initialEnemy
         , actions = initialActions
+        , health = Meter.create 100
         }
     , Cmd.none
     )
@@ -162,8 +163,8 @@ updateParty updateFn game =
 
 
 updateActions : (SelectionList Action Selection -> SelectionList Action Selection) -> Game -> Game
-updateActions updateFn game =
-    { game | actions = updateFn game.actions }
+updateActions fn game =
+    { game | actions = fn game.actions }
 
 
 dealDamageToEnemy : Int -> Game -> Game
@@ -180,8 +181,13 @@ dealDamageToEnemy amount model =
 
 
 updateEnemy : (Enemy -> Enemy) -> Game -> Game
-updateEnemy updateFn game =
-    { game | enemy = updateFn game.enemy }
+updateEnemy fn game =
+    { game | enemy = fn game.enemy }
+
+
+updateHealth : (Meter -> Meter) -> Game -> Game
+updateHealth fn game =
+    { game | health = fn game.health }
 
 
 updateEnemyEnergy : Float -> Enemy -> Enemy
@@ -242,7 +248,7 @@ updateGame engineArgs msg game =
             ContinueGame ( newGame, Cmd.none )
 
         SelectAction position ->
-            case SelectionList.select position game.actions of
+            case SelectionList.select { liveInputs = [] } position game.actions of
                 Err _ ->
                     -- TODO: sound effect?
                     noOp
@@ -256,27 +262,28 @@ updateGame engineArgs msg game =
 
         Input input ->
             let
-                updateInputs : Selection -> Selection
-                updateInputs selection =
-                    let
-                        nextInput : Maybe Input
-                        nextInput =
+                updateInputs : Action -> Selection -> Selection
+                updateInputs action selection =
+                    case action of
+                        EnemyMove ->
+                            selection
+
+                        AllyMove move ->
                             let
-                                pattern =
-                                    selection.move.recipe
+                                nextInput : Maybe Input
+                                nextInput =
+                                    Utils.getNextInput move.recipe (List.reverse selection.liveInputs)
+
+                                inputMatches =
+                                    nextInput
+                                        |> Maybe.map ((==) input)
+                                        |> Maybe.withDefault False
                             in
-                            Utils.getNextInput pattern (List.reverse selection.liveInputs)
+                            if inputMatches then
+                                addInputToSelection input selection
 
-                        inputMatches =
-                            nextInput
-                                |> Maybe.map ((==) input)
-                                |> Maybe.withDefault False
-                    in
-                    if inputMatches then
-                        addInputToSelection input selection
-
-                    else
-                        selection
+                            else
+                                selection
             in
             case SelectionList.mapSelection updateInputs game.actions of
                 Err _ ->
@@ -295,52 +302,48 @@ updateGame engineArgs msg game =
                     -- Should not be reachable
                     noOp
 
-                Ok ( selectedAlly, selection ) ->
-                    if Utils.isPatternComplete selection.move.recipe (List.reverse selection.liveInputs) then
-                        let
-                            applyOnSuccess : Game -> Game
-                            applyOnSuccess oldGame =
+                Ok ( action, selection ) ->
+                    case action of
+                        EnemyMove ->
+                            Debug.todo "Implement Finish on enemy move"
+
+                        AllyMove move ->
+                            if Utils.isPatternComplete move.recipe (List.reverse selection.liveInputs) then
                                 let
-                                    effects =
-                                        selection.move.onSuccess
+                                    applyOnSuccess : Game -> Game
+                                    applyOnSuccess oldGame =
+                                        let
+                                            effects =
+                                                move.onSuccess
 
-                                    applyEffect : Ally.Effect -> Game -> Game
-                                    applyEffect effect g =
-                                        case effect of
-                                            Ally.Damage amount ->
-                                                dealDamageToEnemy amount g
+                                            applyEffect : Ally.Effect -> Game -> Game
+                                            applyEffect effect g =
+                                                case effect of
+                                                    Ally.Damage amount ->
+                                                        dealDamageToEnemy amount g
+                                        in
+                                        List.foldl applyEffect oldGame effects
+
+                                    newGame =
+                                        game
+                                            |> applyOnSuccess
+                                            |> updateActions SelectionList.clearSelection
+                                            |> updateEnemy (\enemy -> { enemy | spriteAnimation = Just <| Animation.create Animation.Shake })
                                 in
-                                List.foldl applyEffect oldGame effects
+                                if isGameWon newGame then
+                                    PlayerWon ( newGame, emitSound sounds.attack )
 
-                            drainMeter : Ally -> Ally
-                            drainMeter ally =
-                                { ally | energy = Meter.drain ally.energy }
+                                else
+                                    ContinueGame ( newGame, emitSound sounds.attack )
 
-                            updateEnergy : Party -> Party
-                            updateEnergy =
-                                Debug.todo "Implement updateEnergy"
-
-                            newGame =
-                                game
-                                    |> applyOnSuccess
-                                    |> updateParty updateEnergy
-                                    |> updateActions SelectionList.clearSelection
-                                    |> updateEnemy (\enemy -> { enemy | spriteAnimation = Just <| Animation.create Animation.Shake })
-                        in
-                        if isGameWon newGame then
-                            PlayerWon ( newGame, emitSound sounds.attack )
-
-                        else
-                            ContinueGame ( newGame, emitSound sounds.attack )
-
-                    else
-                        -- Finish was called without a completed pattern for a selected ally
-                        let
-                            newGame =
-                                game
-                                    |> updateActions SelectionList.clearSelection
-                        in
-                        ContinueGame ( newGame, emitSound sounds.select )
+                            else
+                                -- Finish was called without a completed pattern for a selected ally
+                                let
+                                    newGame =
+                                        game
+                                            |> updateActions SelectionList.clearSelection
+                                in
+                                ContinueGame ( newGame, emitSound sounds.select )
 
         HandleAnimationFrame delta ->
             let
@@ -369,8 +372,7 @@ updateGame engineArgs msg game =
                                 { enemy | energy = Meter.drain oldEnemy.energy }
                         in
                         oldGame
-                            |> Debug.todo "Implement enemy attack"
-                            -- |> damageRandomAlly (toFloat enemy.stats.damage)
+                            |> updateHealth (Meter.subtract (toFloat enemy.stats.damage))
                             |> updateEnemy drainEnergy
                             |> updateEnemy (updateEnemyEnergy delta)
 

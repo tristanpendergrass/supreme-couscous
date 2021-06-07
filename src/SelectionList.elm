@@ -70,14 +70,14 @@ select initialData index selectionList =
         Err "Index is out of bounds"
 
 
-mapSelection : (d -> d) -> SelectionList t d -> Result String (SelectionList t d)
+mapSelection : (t -> d -> d) -> SelectionList t d -> Result String (SelectionList t d)
 mapSelection fn (SelectionList first maybeEl second) =
     case maybeEl of
         Nothing ->
             Err "Index is out of bounds"
 
         Just ( el, data ) ->
-            Ok <| SelectionList first (Just ( el, fn data )) second
+            Ok <| SelectionList first (Just ( el, fn el data )) second
 
 
 getSelected : SelectionList t d -> Result String ( t, d )
