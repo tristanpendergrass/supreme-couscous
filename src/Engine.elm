@@ -128,7 +128,7 @@ init engineArgs _ =
 
         initialActions : SelectionList Action Selection
         initialActions =
-            SelectionList.create
+            SelectionList.create 5
     in
     ( GameInProgress
         { seed = Random.initialSeed 0
@@ -305,7 +305,7 @@ updateGame engineArgs msg game =
                 Ok ( action, selection ) ->
                     case action of
                         EnemyMove ->
-                            Debug.todo "Implement Finish on enemy move"
+                            Debug.todo "Implement enemy move"
 
                         AllyMove move ->
                             if Utils.isPatternComplete move.recipe (List.reverse selection.liveInputs) then
@@ -422,28 +422,35 @@ tryAll things =
                     tryAll rest
 
 
+getAvailableInputs : Game -> List Input
+getAvailableInputs game =
+    SelectionList.getSelected game.actions
+        |> Result.map
+            (\( action, _ ) ->
+                case action of
+                    AllyMove move ->
+                        move.inputs
+
+                    EnemyMove ->
+                        []
+            )
+        |> Result.withDefault []
+
+
 toUserInput : EngineArgs -> Game -> String -> Msg
 toUserInput engineArgs game string =
     let
-        selectionInput =
-            -- SelectionList.getSelected game.actions
-            --     |> Result.andThen
-            --         (\( _, selection ) ->
-            --             toSelectedAllyInput selection.move.recipe string
-            --         )
-            Debug.todo "Implement selectionInput"
-
         result =
             tryAll
-                [ toGlobalUserInput string
-                , selectionInput
+                [ matchGlobalAction string
+                , matchSelectionAction game string
                 ]
     in
     Maybe.withDefault NoOp result
 
 
-toSelectedAllyInput : List Input -> String -> Maybe Msg
-toSelectedAllyInput inputs string =
+findInputMatchingString : String -> List Input -> Maybe Msg
+findInputMatchingString string inputs =
     let
         inputMatchesString : String -> Input -> Bool
         inputMatchesString iterString ( trigger, _ ) =
@@ -454,8 +461,8 @@ toSelectedAllyInput inputs string =
         |> Maybe.map Input
 
 
-toGlobalUserInput : String -> Maybe Msg
-toGlobalUserInput string =
+matchGlobalAction : String -> Maybe Msg
+matchGlobalAction string =
     case string of
         "1" ->
             Just (SelectAction 0)
@@ -477,6 +484,13 @@ toGlobalUserInput string =
 
         _ ->
             Nothing
+
+
+matchSelectionAction : Game -> String -> Maybe Msg
+matchSelectionAction game string =
+    game
+        |> getAvailableInputs
+        |> findInputMatchingString string
 
 
 subscriptions : EngineArgs -> Model -> Sub Msg
