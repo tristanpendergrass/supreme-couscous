@@ -90,7 +90,7 @@ type alias Enemy =
 
 
 type Action
-    = AllyMove Ally.Move
+    = AllyMove Ally Ally.Move
     | EnemyMove
 
 
@@ -268,7 +268,7 @@ updateGame engineArgs msg game =
                         EnemyMove ->
                             selection
 
-                        AllyMove move ->
+                        AllyMove _ move ->
                             let
                                 nextInput : Maybe Input
                                 nextInput =
@@ -307,7 +307,7 @@ updateGame engineArgs msg game =
                         EnemyMove ->
                             Debug.todo "Implement enemy move"
 
-                        AllyMove move ->
+                        AllyMove _ move ->
                             if Utils.isPatternComplete move.recipe (List.reverse selection.liveInputs) then
                                 let
                                     applyOnSuccess : Game -> Game
@@ -428,7 +428,7 @@ getAvailableInputs game =
         |> Result.map
             (\( action, _ ) ->
                 case action of
-                    AllyMove move ->
+                    AllyMove _ move ->
                         move.inputs
 
                     EnemyMove ->
@@ -607,82 +607,79 @@ renderTop game =
 
 renderBottom : Game -> Html Msg
 renderBottom game =
-    Debug.todo "Implement renderBottom"
+    case SelectionList.getSelected game.actions of
+        Err _ ->
+            div [] []
+
+        Ok ( AllyMove ally move, selection ) ->
+            renderAllyBottom ally move selection
+
+        Ok ( EnemyMove, _ ) ->
+            div [] []
 
 
+renderAllyBottom : Ally -> Ally.Move -> Selection -> Html Msg
+renderAllyBottom ally move selection =
+    let
+        renderPortrait : Html Msg
+        renderPortrait =
+            div [ class "overflow-hidden w-48 h-48 relative" ]
+                [ div [ class "bg-blue-200 border-4 border-gray-900" ] [ img [ src ally.stats.avatarUrl, class "bg-blue-200" ] [] ]
+                ]
 
--- All this commented out code should be part of a render bottom only if an ally action is selected. Need to fork
--- to another view if it's an enemy dodge probably
--- let
---     renderPortrait : Party -> Html Msg
---     renderPortrait party =
---         div [ class "overflow-hidden w-48 h-48 relative" ]
---             [ case SelectionList.getSelected game.actions of
---                 Ok ( action, _ ) ->
---                     div [ class "bg-blue-200 border-4 border-gray-900" ] [ img [ src action.stats.avatarUrl, class "bg-blue-200" ] [] ]
---                 Err _ ->
---                     div [] []
---             ]
---     renderPrompt : Game -> Html Msg
---     renderPrompt game =
---         div [ class "w-64 h-48" ]
---             [ case SelectionList.getSelected game.actions of
---                 Ok ( _, selection ) ->
---                     div [ class "italic" ] [ text selection.move.prompt ]
---                 Err _ ->
---                     div [] []
---             ]
---     renderInput : Input -> Html Msg
---     renderInput input =
---         let
---             ( trigger, name ) =
---                 input
---         in
---         button [ class inputContainer, onClick (Input input) ]
---             [ div [ class inputTrigger ] [ text <| String.fromChar trigger ]
---             , div [ class inputLabel ] [ text name ]
---             ]
---     renderFinish : Ally.Move -> Html Msg
---     renderFinish _ =
---         button [ class inputContainer, onClick Finish ]
---             [ div [ class inputTrigger ] [ text "Enter" ]
---             , div [ class inputLabel ] [ text "Finish" ]
---             ]
---     renderMove : Party -> Html Msg
---     renderMove party =
---         div [ class "w-96 h-48 " ]
---             [ case Party.getSelected party of
---                 Just ( _, selection ) ->
---                     div [ class "h-full w-full flex-col" ]
---                         [ div [ class "w-96 h-40" ]
---                             [ selection.move.inputs
---                                 |> List.map renderInput
---                                 |> div [ class "flex space-x-2 flex-wrap" ]
---                             ]
---                         , div [ class "w-96 h-8" ] [ renderFinish selection.move ]
---                         ]
---                 Nothing ->
---                     div [] []
---             ]
---     renderLiveInput : Input -> Html Msg
---     renderLiveInput ( _, move ) =
---         div [] [ text move ]
---     renderInputs : Party -> Html Msg
---     renderInputs party =
---         case Party.getSelected party of
---             Just ( _, { liveInputs } ) ->
---                 div [ class "flex-grow h-48 border border-gray-900" ]
---                     [ div [ class "flex-col" ] (List.map renderLiveInput liveInputs)
---                     ]
---             Nothing ->
---                 div [] []
--- in
--- div [ class "w-full h-full border-gray-500 border-4 bg-gray-400 flex items-center p-2 space-x-2" ]
---     [ renderPortrait <| game.party
---     , renderPrompt <| game.party
---     , renderMove <| game.party
---     , renderInputs <| game.party
---     ]
+        renderPrompt : Html Msg
+        renderPrompt =
+            div [ class "w-64 h-48" ]
+                [ div [ class "italic" ] [ text move.prompt ]
+                ]
+
+        renderInput : Input -> Html Msg
+        renderInput input =
+            let
+                ( trigger, name ) =
+                    input
+            in
+            button [ class inputContainer, onClick (Input input) ]
+                [ div [ class inputTrigger ] [ text <| String.fromChar trigger ]
+                , div [ class inputLabel ] [ text name ]
+                ]
+
+        renderFinish : Html Msg
+        renderFinish =
+            button [ class inputContainer, onClick Finish ]
+                [ div [ class inputTrigger ] [ text "Enter" ]
+                , div [ class inputLabel ] [ text "Finish" ]
+                ]
+
+        renderMove : Html Msg
+        renderMove =
+            div [ class "w-96 h-48 " ]
+                [ div [ class "h-full w-full flex-col" ]
+                    [ div [ class "w-96 h-40" ]
+                        [ move.inputs
+                            |> List.map renderInput
+                            |> div [ class "flex space-x-2 flex-wrap" ]
+                        ]
+                    , div [ class "w-96 h-8" ] [ renderFinish ]
+                    ]
+                ]
+
+        renderLiveInput : Input -> Html Msg
+        renderLiveInput ( _, label ) =
+            div [] [ text label ]
+
+        renderInputs : Html Msg
+        renderInputs =
+            div [ class "flex-grow h-48 border border-gray-900" ]
+                [ div [ class "flex-col" ] (List.map renderLiveInput selection.liveInputs)
+                ]
+    in
+    div [ class "w-full h-full border-gray-500 border-4 bg-gray-400 flex items-center p-2 space-x-2" ]
+        [ renderPortrait
+        , renderPrompt
+        , renderMove
+        , renderInputs
+        ]
 
 
 view : EngineArgs -> Model -> Html Msg
