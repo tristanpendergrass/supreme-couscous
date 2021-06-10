@@ -6,6 +6,8 @@ module Ally exposing
     , addShake
     , create
     , damage
+    , drainEnergyIfFull
+    , energyIsFull
     , handleAnimationFrame
     )
 
@@ -69,3 +71,17 @@ handleAnimationFrame delta ally =
         | energy = Meter.handleAnimationFrame delta ally.energy
         , spriteAnimation = Maybe.andThen (Animation.updateAnimation delta) ally.spriteAnimation
     }
+
+
+drainEnergyIfFull : Ally -> Ally
+drainEnergyIfFull ally =
+    if Meter.isFull ally.energy then
+        { ally | energy = Meter.drain ally.energy }
+
+    else
+        ally
+
+
+energyIsFull : Ally -> Bool
+energyIsFull =
+    .energy >> Meter.isFull

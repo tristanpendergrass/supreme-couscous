@@ -4,15 +4,16 @@ module Party exposing
     ,  create
        -- , damageRandomMember
 
+    , fromList
+    , getAliveAllies
     , handleAnimationFrame
     , isEveryoneDead
     , map
+    , mapAliveAllies
     )
 
 import Ally exposing (Ally)
 import List.Extra
-import Meter
-import Random
 
 
 type Party
@@ -31,6 +32,11 @@ type alias Input =
 create : List Ally -> Party
 create =
     List.map AliveAlly >> Party
+
+
+fromList : List AllySpot -> Party
+fromList spots =
+    Party spots
 
 
 
@@ -84,7 +90,25 @@ handleAnimationFrame delta (Party party) =
 isEveryoneDead : Party -> Bool
 isEveryoneDead (Party party) =
     party
-        |> List.all isAlive
+        |> List.all (isAlive >> not)
+
+
+mapAliveAllies : (Ally -> Ally) -> Party -> Party
+mapAliveAllies fn (Party spots) =
+    let
+        newSpots =
+            List.map
+                (\allySpot ->
+                    case allySpot of
+                        AliveAlly ally ->
+                            AliveAlly (fn ally)
+
+                        DeadAlly _ ->
+                            allySpot
+                )
+                spots
+    in
+    Party newSpots
 
 
 
@@ -101,21 +125,21 @@ isAlive allySpot =
             False
 
 
-indexesOfAliveAllies : List AllySpot -> List Int
-indexesOfAliveAllies allySpots =
-    let
-        addIndexIfAlive : Int -> AllySpot -> List Int -> List Int
-        addIndexIfAlive index allySpot accum =
-            if isAlive allySpot then
-                index :: accum
+toAliveAlly : AllySpot -> Maybe Ally
+toAliveAlly allySpot =
+    case allySpot of
+        AliveAlly ally ->
+            Just ally
 
-            else
-                accum
-    in
-    allySpots
-        |> List.Extra.indexedFoldl addIndexIfAlive []
+        DeadAlly _ ->
+            Nothing
 
 
 map : (AllySpot -> t) -> Party -> List t
 map fn (Party spots) =
     List.map fn spots
+
+
+getAliveAllies : Party -> List Ally
+getAliveAllies (Party spots) =
+    List.filterMap toAliveAlly spots

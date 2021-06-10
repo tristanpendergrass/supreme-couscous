@@ -68,3 +68,11 @@ Dodging patterns should derive from the monster you're fighting, not from the al
 - An aggressive but squishy enemy that makes lots of smaller attacks.
 - A tanky enemy. It would have a vast health pool, non-threatening attacks, and charge a large unblockable hit. This will feel like a damage check and rewards high damage comps.
 - An enemy that rewards timing your attacks correctly. They deploy a shield blocking percent of damage periodically.
+
+## Morale
+
+Party morale is what takes a hit when the party takes a hit (there is no concept of health, although there are injuries). Morale is a meter that goes from 0 to 100 or whatever, but more significantly it will determine some things about the fight. If it's full then heroes attack slowly but confidently, striking with full effectiveness and easily. When the morale sinks lower than full ally attacks are drawn from a pool that has lower cooldowns and lower effectiveness. You have to do more actions just to keep up the same pace of damage.
+
+## Injuries
+
+Individual party members can be injured by enemies. The effects of injuries could be to slow their energy gain, decrease the effectiveness of their moves, or make their moves harder to execute by adding junk to the recipe.

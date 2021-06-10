@@ -9,7 +9,7 @@ import Html exposing (Html, button, div, img, text)
 import Html.Attributes exposing (class, src, style)
 import Html.Events exposing (onClick)
 import Json.Decode as Decode
-import List.Extra
+import List.Extra exposing (mapAccuml)
 import Meter exposing (Meter)
 import Party exposing (Party)
 import Random
@@ -193,6 +193,76 @@ updateHealth fn game =
 updateEnemyEnergy : Float -> Enemy -> Enemy
 updateEnemyEnergy delta enemy =
     { enemy | energy = Meter.handleAnimationFrame delta enemy.energy }
+
+
+foldMap : (a -> accum -> ( a, accum )) -> accum -> List a -> ( List a, accum )
+foldMap foldFn accum list =
+    case list of
+        [] ->
+            ( [], accum )
+
+        first :: rest ->
+            let
+                ( newEl, newAccum ) =
+                    foldFn first accum
+
+                ( newRest, newNewAccum ) =
+                    foldMap foldFn newAccum rest
+            in
+            ( newEl :: newRest, newNewAccum )
+
+
+addMove : Ally.Move -> Game -> Game
+addMove move =
+    let
+        action : Action
+        action =
+            Debug.todo "Get action"
+    in
+    updateActions (SelectionList.push action)
+
+
+setSeed : Random.Seed -> Game -> Game
+setSeed seed game =
+    { game | seed = seed }
+
+
+addNewAllyActions : Game -> Game
+addNewAllyActions =
+    let
+        addAllyAction : Ally -> Game -> Game
+        addAllyAction ally accumGame =
+            if Ally.energyIsFull ally then
+                case ally.stats.moves of
+                    [] ->
+                        accumGame
+
+                    first :: rest ->
+                        let
+                            randomMove =
+                                Random.uniform first rest
+
+                            ( move, newSeed ) =
+                                Random.step randomMove accumGame.seed
+                        in
+                        accumGame
+                            |> addMove move
+                            |> setSeed newSeed
+
+            else
+                accumGame
+
+        addActions : Game -> Game
+        addActions oldGame =
+            oldGame.party
+                |> Party.getAliveAllies
+                |> List.foldl addAllyAction oldGame
+
+        removeEnergy : Game -> Game
+        removeEnergy =
+            updateParty (Party.mapAliveAllies Ally.drainEnergyIfFull)
+    in
+    addActions >> removeEnergy
 
 
 update : EngineArgs -> Msg -> Model -> ( Model, Cmd Msg )
@@ -385,6 +455,7 @@ updateGame engineArgs msg game =
                         |> updateParty (Party.handleAnimationFrame delta)
                         |> handleEnemyAttack
                         |> updateEnemy updateAnimation
+                        |> addNewAllyActions
             in
             if isGameLost newGame then
                 PlayerLost ( newGame, Cmd.none )
@@ -598,9 +669,29 @@ renderTop game =
                         |> Meter.renderHorizontal
                     ]
                 ]
+
+        renderAction : Action -> Html Msg
+        renderAction action =
+            div [] [ text "Action here" ]
+
+        renderSelectedAction : ( Action, selection ) -> Html Msg
+        renderSelectedAction action =
+            div [] [ text "SelectedAction here" ]
+
+        renderNull : Html Msg
+        renderNull =
+            div [] [ text " Null here" ]
+
+        renderActions : SelectionList Action Selection -> Html Msg
+        renderActions actions =
+            div [ class "border border-dashed border-blue-500 h-full w-64" ]
+                (actions
+                    |> SelectionList.map renderAction renderSelectedAction renderNull
+                )
     in
     div [ class "w-full h-full bg-blue-400 flex justify-between" ]
-        [ renderAllies
+        [ renderActions game.actions
+        , renderAllies
         , renderEnemy game.enemy
         ]
 

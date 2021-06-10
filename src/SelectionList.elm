@@ -2,8 +2,11 @@ module SelectionList exposing
     ( SelectionList
     , clearSelection
     , create
+    , getLength
     , getSelected
+    , map
     , mapSelection
+    , push
     , select
     )
 
@@ -20,6 +23,16 @@ create length =
     NoSelection length (List.repeat length Nothing)
 
 
+getLength : SelectionList t d -> Int
+getLength selectionList =
+    case selectionList of
+        HasSelection length _ _ _ ->
+            length
+
+        NoSelection length _ ->
+            length
+
+
 clearSelection : SelectionList t d -> SelectionList t d
 clearSelection list =
     case list of
@@ -28,16 +41,6 @@ clearSelection list =
 
         HasSelection length first ( el, _ ) second ->
             NoSelection length (List.concat [ first, [ Just el ], second ])
-
-
-getLength : SelectionList t d -> Int
-getLength selectionList =
-    case selectionList of
-        NoSelection length _ ->
-            length
-
-        HasSelection length _ _ _ ->
-            length
 
 
 select : d -> Int -> SelectionList t d -> Result String (SelectionList t d)
@@ -96,3 +99,32 @@ getSelected selectionList =
 
         HasSelection _ _ selection _ ->
             Ok selection
+
+
+map : (t -> a) -> (( t, d ) -> a) -> a -> SelectionList t d -> List a
+map mapEl mapSelectedEl mapNull selectionList =
+    let
+        mapMaybeEl : Maybe t -> a
+        mapMaybeEl maybeEl =
+            case maybeEl of
+                Just el ->
+                    mapEl el
+
+                Nothing ->
+                    mapNull
+    in
+    case selectionList of
+        HasSelection _ first ( el, data ) second ->
+            List.concat
+                [ List.map mapMaybeEl first
+                , [ mapSelectedEl ( el, data ) ]
+                , List.map mapMaybeEl second
+                ]
+
+        NoSelection _ list ->
+            List.map mapMaybeEl list
+
+
+push : t -> SelectionList t d -> SelectionList t d
+push el selectionList =
+    Debug.todo "Implement push"
