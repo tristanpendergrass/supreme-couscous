@@ -195,30 +195,8 @@ updateEnemyEnergy delta enemy =
     { enemy | energy = Meter.handleAnimationFrame delta enemy.energy }
 
 
-foldMap : (a -> accum -> ( a, accum )) -> accum -> List a -> ( List a, accum )
-foldMap foldFn accum list =
-    case list of
-        [] ->
-            ( [], accum )
-
-        first :: rest ->
-            let
-                ( newEl, newAccum ) =
-                    foldFn first accum
-
-                ( newRest, newNewAccum ) =
-                    foldMap foldFn newAccum rest
-            in
-            ( newEl :: newRest, newNewAccum )
-
-
-addMove : Ally.Move -> Game -> Game
-addMove move =
-    let
-        action : Action
-        action =
-            Debug.todo "Get action"
-    in
+addAction : Action -> Game -> Game
+addAction action =
     updateActions (SelectionList.push action)
 
 
@@ -246,7 +224,7 @@ addNewAllyActions =
                                 Random.step randomMove accumGame.seed
                         in
                         accumGame
-                            |> addMove move
+                            |> addAction (AllyMove ally move)
                             |> setSeed newSeed
 
             else

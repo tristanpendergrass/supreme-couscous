@@ -11,6 +11,7 @@ module SelectionList exposing
     )
 
 import List.Extra
+import Maybe.Extra
 
 
 type SelectionList t d
@@ -125,6 +126,37 @@ map mapEl mapSelectedEl mapNull selectionList =
             List.map mapMaybeEl list
 
 
+{-| Attemtps to find the first Nothing in a list of Maybes and replace it with the given element. Returns Nothing if no suitable
+spot was found.
+-}
+attemptPushToList : a -> List (Maybe a) -> Maybe (List (Maybe a))
+attemptPushToList el list =
+    case List.Extra.splitWhen Maybe.Extra.isNothing list of
+        Just ( beforeNothing, _ :: afterNothing ) ->
+            Just (List.concat [ beforeNothing, [ Just el ], afterNothing ])
+
+        _ ->
+            Nothing
+
+
 push : t -> SelectionList t d -> SelectionList t d
 push el selectionList =
-    Debug.todo "Implement push"
+    case selectionList of
+        NoSelection length list ->
+            attemptPushToList el list
+                |> Maybe.map (NoSelection length)
+                |> Maybe.withDefault selectionList
+
+        HasSelection length first selectedEl second ->
+            let
+                attemptPushToFirst =
+                    attemptPushToList el first
+                        |> Maybe.map (\newFirst -> HasSelection length newFirst selectedEl second)
+
+                attemptPushToSecond =
+                    attemptPushToList el second
+                        |> Maybe.map (\newSecond -> HasSelection length first selectedEl newSecond)
+            in
+            attemptPushToFirst
+                |> Maybe.Extra.orElse attemptPushToSecond
+                |> Maybe.withDefault selectionList
