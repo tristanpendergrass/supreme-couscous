@@ -522,6 +522,12 @@ matchGlobalAction string =
         "3" ->
             Just (SelectAction 2)
 
+        "4" ->
+            Just (SelectAction 3)
+
+        "5" ->
+            Just (SelectAction 4)
+
         "Escape" ->
             Just DeselectAction
 

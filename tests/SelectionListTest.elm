@@ -43,4 +43,16 @@ suite =
                     |> Result.map toString
                     |> Result.map (Expect.equal "2, (4, 0), 6, Nothing")
                     |> Result.withDefault (Expect.fail "Result was Err")
+        , test "Can have the last item selected" <|
+            \_ ->
+                SelectionList.create 5
+                    |> SelectionList.push 0
+                    |> SelectionList.push 1
+                    |> SelectionList.push 2
+                    |> SelectionList.push 3
+                    |> SelectionList.push 4
+                    |> SelectionList.select 0 4
+                    |> Result.map toString
+                    |> Result.map (Expect.equal "0, 1, 2, 3, (4, 0)")
+                    |> Result.withDefault (Expect.fail "Result was Err")
         ]
