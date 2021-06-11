@@ -2,6 +2,7 @@ module SelectionList exposing
     ( SelectionList
     , clearSelection
     , create
+    , deleteSelected
     , getLength
     , getSelected
     , map
@@ -160,3 +161,13 @@ push el selectionList =
             attemptPushToFirst
                 |> Maybe.Extra.orElse attemptPushToSecond
                 |> Maybe.withDefault selectionList
+
+
+deleteSelected : SelectionList t d -> SelectionList t d
+deleteSelected selectionList =
+    case selectionList of
+        NoSelection _ _ ->
+            selectionList
+
+        HasSelection length first _ second ->
+            NoSelection length (List.concat [ first, Nothing :: second ])

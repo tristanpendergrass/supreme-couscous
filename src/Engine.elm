@@ -243,6 +243,21 @@ addNewAllyActions =
     addActions >> removeEnergy
 
 
+applyOnSuccess : Ally.Move -> Game -> Game
+applyOnSuccess move game =
+    let
+        effects =
+            move.onSuccess
+
+        applyEffect : Ally.Effect -> Game -> Game
+        applyEffect effect g =
+            case effect of
+                Ally.Damage amount ->
+                    dealDamageToEnemy amount g
+    in
+    List.foldl applyEffect game effects
+
+
 update : EngineArgs -> Msg -> Model -> ( Model, Cmd Msg )
 update engineArgs msg model =
     case model of
@@ -347,7 +362,7 @@ updateGame engineArgs msg game =
         Finish ->
             case SelectionList.getSelected game.actions of
                 Err _ ->
-                    -- Should not be reachable
+                    -- Finishing when nothing is selected shouldn't normally happen
                     noOp
 
                 Ok ( action, selection ) ->
@@ -358,38 +373,20 @@ updateGame engineArgs msg game =
                         AllyMove _ move ->
                             if Utils.isPatternComplete move.recipe (List.reverse selection.liveInputs) then
                                 let
-                                    applyOnSuccess : Game -> Game
-                                    applyOnSuccess oldGame =
-                                        let
-                                            effects =
-                                                move.onSuccess
-
-                                            applyEffect : Ally.Effect -> Game -> Game
-                                            applyEffect effect g =
-                                                case effect of
-                                                    Ally.Damage amount ->
-                                                        dealDamageToEnemy amount g
-                                        in
-                                        List.foldl applyEffect oldGame effects
-
                                     newGame =
                                         game
-                                            |> applyOnSuccess
-                                            |> updateActions SelectionList.clearSelection
+                                            |> applyOnSuccess move
+                                            |> updateActions SelectionList.deleteSelected
                                             |> updateEnemy (\enemy -> { enemy | spriteAnimation = Just <| Animation.create Animation.Shake })
                                 in
-                                if isGameWon newGame then
-                                    PlayerWon ( newGame, emitSound sounds.attack )
-
-                                else
-                                    ContinueGame ( newGame, emitSound sounds.attack )
+                                ContinueGame ( newGame, emitSound sounds.attack )
 
                             else
                                 -- Finish was called without a completed pattern for a selected ally
                                 let
                                     newGame =
                                         game
-                                            |> updateActions SelectionList.clearSelection
+                                            |> updateActions SelectionList.deleteSelected
                                 in
                                 ContinueGame ( newGame, emitSound sounds.select )
 
@@ -428,6 +425,7 @@ updateGame engineArgs msg game =
                         oldGame
                             |> updateEnemy (updateEnemyEnergy delta)
 
+                newGame : Game
                 newGame =
                     game
                         |> updateParty (Party.handleAnimationFrame delta)
@@ -437,6 +435,9 @@ updateGame engineArgs msg game =
             in
             if isGameLost newGame then
                 PlayerLost ( newGame, Cmd.none )
+
+            else if isGameWon newGame then
+                PlayerWon ( newGame, Cmd.none )
 
             else
                 ContinueGame ( newGame, Cmd.none )
