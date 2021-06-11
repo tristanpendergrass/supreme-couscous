@@ -68,7 +68,7 @@ select initialData index selectionList =
                     Nothing
 
         newSecond =
-            List.drop index list
+            List.drop (index + 1) list
     in
     if index < List.length list then
         case maybeEl of
