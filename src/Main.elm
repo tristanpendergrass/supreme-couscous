@@ -22,7 +22,7 @@ allyOne =
                 ]
           }
         ]
-    , maxEnergy = 30
+    , maxEnergy = 100
     }
 
 
@@ -45,7 +45,7 @@ allyTwo =
                 ]
           }
         ]
-    , maxEnergy = 100
+    , maxEnergy = 150
     }
 
 
@@ -69,7 +69,7 @@ allyThree =
                 ]
           }
         ]
-    , maxEnergy = 85
+    , maxEnergy = 185
     }
 
 

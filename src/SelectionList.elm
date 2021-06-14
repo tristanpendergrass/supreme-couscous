@@ -5,7 +5,7 @@ module SelectionList exposing
     , deleteSelected
     , getLength
     , getSelected
-    , map
+    , indexedMap
     , mapSelection
     , push
     , select
@@ -103,28 +103,28 @@ getSelected selectionList =
             Ok selection
 
 
-map : (t -> a) -> (( t, d ) -> a) -> a -> SelectionList t d -> List a
-map mapEl mapSelectedEl mapNull selectionList =
+indexedMap : (Int -> t -> a) -> (Int -> ( t, d ) -> a) -> (Int -> a) -> SelectionList t d -> List a
+indexedMap mapEl mapSelectedEl mapNull selectionList =
     let
-        mapMaybeEl : Maybe t -> a
-        mapMaybeEl maybeEl =
+        mapMaybeEl : Int -> Maybe t -> a
+        mapMaybeEl index maybeEl =
             case maybeEl of
                 Just el ->
-                    mapEl el
+                    mapEl index el
 
                 Nothing ->
-                    mapNull
+                    mapNull index
     in
     case selectionList of
         HasSelection _ first ( el, data ) second ->
             List.concat
-                [ List.map mapMaybeEl first
-                , [ mapSelectedEl ( el, data ) ]
-                , List.map mapMaybeEl second
+                [ List.indexedMap mapMaybeEl first
+                , [ mapSelectedEl (List.length first) ( el, data ) ]
+                , List.indexedMap (\index maybeEl -> mapMaybeEl (index + List.length first + 1) maybeEl) second
                 ]
 
         NoSelection _ list ->
-            List.map mapMaybeEl list
+            List.indexedMap mapMaybeEl list
 
 
 {-| Attemtps to find the first Nothing in a list of Maybes and replace it with the given element. Returns Nothing if no suitable

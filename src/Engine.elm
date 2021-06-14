@@ -581,6 +581,74 @@ inputLabel =
     "py-1 px-2"
 
 
+renderActionList : Game -> Html Msg
+renderActionList game =
+    let
+        actions =
+            game.actions
+
+        actionContainer =
+            "flex w-full h-12 items-center"
+
+        actionContent =
+            "h-10 w-36 border border-black border-l-0 text-sm overflow-hidden flex justify-center items-center shadow-xl rounded-r cursor-pointer"
+
+        renderActionNumber : Int -> Msg -> Html Msg
+        renderActionNumber index handleClick =
+            div
+                [ class "h-full w-12 border-2 border-black border-l-0 flex justify-center items-center cursor-pointer"
+                , onClick handleClick
+                ]
+                [ div [] [ text <| String.fromInt (index + 1) ] ]
+
+        renderUnselectedAction : Int -> Action -> Html Msg
+        renderUnselectedAction index action =
+            case action of
+                EnemyMove ->
+                    div [ class actionContainer, onClick (SelectAction index) ]
+                        [ renderActionNumber index (SelectAction index)
+                        , div [ class actionContent ]
+                            []
+                        ]
+
+                AllyMove ally move ->
+                    div [ class actionContainer, onClick (SelectAction index) ]
+                        [ renderActionNumber index (SelectAction index)
+                        , div [ class actionContent ]
+                            [ img [ src ally.stats.avatarUrl ] [] ]
+                        ]
+
+        renderSelectedAction : Int -> ( Action, Selection ) -> Html Msg
+        renderSelectedAction index ( action, selection ) =
+            case action of
+                EnemyMove ->
+                    div [ class actionContainer, onClick DeselectAction ]
+                        [ renderActionNumber index DeselectAction
+                        , div [ class actionContent, class "border-dashed" ]
+                            []
+                        ]
+
+                AllyMove ally move ->
+                    div [ class actionContainer, onClick DeselectAction ]
+                        [ renderActionNumber index DeselectAction
+                        , div [ class actionContent, class "border-dashed" ]
+                            [ img [ src ally.stats.avatarUrl ] [] ]
+                        ]
+
+        renderNothing : Int -> Html Msg
+        renderNothing index =
+            div [ class actionContainer ]
+                [ renderActionNumber index NoOp
+                ]
+    in
+    div [ class "border border-dashed border-blue-500 h-full w-64" ]
+        [ div [ class "w-full h-full flex flex-col space-y-4 mt-4" ]
+            (actions
+                |> SelectionList.indexedMap renderUnselectedAction renderSelectedAction renderNothing
+            )
+        ]
+
+
 renderTop : Game -> Html Msg
 renderTop game =
     let
@@ -596,22 +664,14 @@ renderTop game =
                 { battleUrl } =
                     stats
 
-                allyStats =
-                    div [ class allyStatsContainer, class "flex space-x-1" ]
-                        [ energy
-                            |> Meter.setColor Meter.Blue
-                            |> Meter.setDisplaySize 75
-                            |> Meter.renderVertical
-                        ]
-
                 allyImage =
                     div [ class "relative" ]
                         [ img [ class "w-24 h-24", class (Animation.classForAnimation ally.spriteAnimation), src battleUrl ] []
                         ]
             in
             div [ class "flex-col space-y-2" ]
-                [ div [ class "flex items-end space-x-2" ]
-                    [ div [ class "mb-2" ] [ allyStats ], allyImage ]
+                [ div [ class "flex items-end" ]
+                    [ allyImage ]
                 ]
 
         renderDeadAlly : Ally.Stats -> Html Msg
@@ -654,28 +714,9 @@ renderTop game =
                         |> Meter.renderHorizontal
                     ]
                 ]
-
-        renderAction : Action -> Html Msg
-        renderAction action =
-            div [] [ text "Action here" ]
-
-        renderSelectedAction : ( Action, selection ) -> Html Msg
-        renderSelectedAction action =
-            div [] [ text "SelectedAction here" ]
-
-        renderNull : Html Msg
-        renderNull =
-            div [] [ text " Null here" ]
-
-        renderActions : SelectionList Action Selection -> Html Msg
-        renderActions actions =
-            div [ class "border border-dashed border-blue-500 h-full w-64" ]
-                (actions
-                    |> SelectionList.map renderAction renderSelectedAction renderNull
-                )
     in
     div [ class "w-full h-full bg-blue-400 flex justify-between" ]
-        [ renderActions game.actions
+        [ renderActionList game
         , renderAllies
         , renderEnemy game.enemy
         ]

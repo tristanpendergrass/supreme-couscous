@@ -8,17 +8,17 @@ import Test exposing (Test, describe, test)
 toString : SelectionList Int Int -> String
 toString selectionList =
     let
-        mapEl =
-            String.fromInt
+        mapEl index num =
+            String.fromInt index ++ ":" ++ String.fromInt num
 
-        mapSelectedEl ( el, data ) =
-            "(" ++ String.fromInt el ++ ", " ++ String.fromInt data ++ ")"
+        mapSelectedEl index ( el, data ) =
+            String.fromInt index ++ ":" ++ "(" ++ String.fromInt el ++ ", " ++ String.fromInt data ++ ")"
 
-        mapNothing =
-            "Nothing"
+        mapNothing index =
+            String.fromInt index ++ ":" ++ "Nothing"
     in
     selectionList
-        |> SelectionList.map mapEl mapSelectedEl mapNothing
+        |> SelectionList.indexedMap mapEl mapSelectedEl mapNothing
         |> String.join ", "
 
 
@@ -32,7 +32,7 @@ suite =
                     |> SelectionList.push 4
                     |> SelectionList.push 6
                     |> toString
-                    |> Expect.equal "2, 4, 6, Nothing"
+                    |> Expect.equal "0:2, 1:4, 2:6, 3:Nothing"
         , test "Can have items selected" <|
             \_ ->
                 SelectionList.create 4
@@ -41,7 +41,7 @@ suite =
                     |> SelectionList.push 6
                     |> SelectionList.select 0 1
                     |> Result.map toString
-                    |> Result.map (Expect.equal "2, (4, 0), 6, Nothing")
+                    |> Result.map (Expect.equal "0:2, 1:(4, 0), 2:6, 3:Nothing")
                     |> Result.withDefault (Expect.fail "Result was Err")
         , test "Can have its selection deleted" <|
             \_ ->
@@ -52,6 +52,6 @@ suite =
                     |> SelectionList.select 0 1
                     |> Result.map SelectionList.deleteSelected
                     |> Result.map toString
-                    |> Result.map (Expect.equal "2, Nothing, 6, Nothing")
+                    |> Result.map (Expect.equal "0:2, 1:Nothing, 2:6, 3:Nothing")
                     |> Result.withDefault (Expect.fail "Result was Err")
         ]
