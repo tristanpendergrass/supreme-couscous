@@ -3,10 +3,12 @@ module SelectionList exposing
     , clearSelection
     , create
     , deleteSelected
+    , filterUnselected
     , getLength
     , getSelected
     , indexedMap
     , mapSelection
+    , mapUnselected
     , push
     , select
     )
@@ -171,3 +173,40 @@ deleteSelected selectionList =
 
         HasSelection length first _ second ->
             NoSelection length (List.concat [ first, Nothing :: second ])
+
+
+mapUnselected : (t -> t) -> SelectionList t d -> SelectionList t d
+mapUnselected fn selectionList =
+    let
+        mapList : List (Maybe t) -> List (Maybe t)
+        mapList =
+            List.map (Maybe.map fn)
+    in
+    case selectionList of
+        NoSelection length list ->
+            NoSelection length (mapList list)
+
+        HasSelection length first maybeEl second ->
+            HasSelection length (mapList first) maybeEl (mapList second)
+
+
+filterUnselected : (t -> Bool) -> SelectionList t d -> SelectionList t d
+filterUnselected fn selectionList =
+    let
+        filterEl : Maybe t -> Maybe t
+        filterEl =
+            Maybe.andThen
+                (\el ->
+                    if fn el then
+                        Just el
+
+                    else
+                        Nothing
+                )
+    in
+    case selectionList of
+        NoSelection length list ->
+            NoSelection length (List.map filterEl list)
+
+        HasSelection length first maybeEl second ->
+            HasSelection length (List.map filterEl first) maybeEl (List.map filterEl second)

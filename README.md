@@ -17,3 +17,7 @@ $ npm run build
 ```
 
 # Roadmap
+
+Visual enhancements:
+
+- 144px x 40px border for action. Also need animated version for selected action.

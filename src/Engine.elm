@@ -1,6 +1,7 @@
 port module Engine exposing (EngineArgEnemy, Instance, create)
 
 import ActionList exposing (ActionList)
+import ActionTimer exposing (ActionTimer)
 import Ally exposing (Ally)
 import Animation exposing (Animation)
 import Browser
@@ -15,6 +16,14 @@ import Party exposing (Party)
 import Random
 import SelectionList exposing (SelectionList)
 import Utils
+
+
+allyActionTimings : ActionTimer.Timings
+allyActionTimings =
+    { slideOutTime = 75
+    , stayTime = 2000
+    , slideInTime = 10000
+    }
 
 
 isJust : Maybe a -> Bool
@@ -90,8 +99,8 @@ type alias Enemy =
 
 
 type Action
-    = AllyMove Ally Ally.Move
-    | EnemyMove
+    = AllyMove ActionTimer Ally Ally.Move
+    | EnemyMove ActionTimer
 
 
 type alias Game =
@@ -222,9 +231,12 @@ addNewAllyActions =
 
                             ( move, newSeed ) =
                                 Random.step randomMove accumGame.seed
+
+                            actionTimer =
+                                ActionTimer.create allyActionTimings
                         in
                         accumGame
-                            |> addAction (AllyMove ally move)
+                            |> addAction (AllyMove actionTimer ally move)
                             |> setSeed newSeed
 
             else
@@ -241,6 +253,22 @@ addNewAllyActions =
             updateParty (Party.mapAliveAllies Ally.drainEnergyIfFull)
     in
     addActions >> removeEnergy
+
+
+getTimer : Action -> ActionTimer
+getTimer action =
+    case action of
+        AllyMove actionTimer _ _ ->
+            actionTimer
+
+        EnemyMove actionTimer ->
+            actionTimer
+
+
+removeDoneActions : Game -> Game
+removeDoneActions game =
+    game
+        |> updateActions (SelectionList.filterUnselected (getTimer >> ActionTimer.isDone >> not))
 
 
 applyOnSuccess : Ally.Move -> Game -> Game
@@ -328,10 +356,10 @@ updateGame engineArgs msg game =
                 updateInputs : Action -> Selection -> Selection
                 updateInputs action selection =
                     case action of
-                        EnemyMove ->
+                        EnemyMove _ ->
                             selection
 
-                        AllyMove _ move ->
+                        AllyMove _ _ move ->
                             let
                                 nextInput : Maybe Input
                                 nextInput =
@@ -367,10 +395,10 @@ updateGame engineArgs msg game =
 
                 Ok ( action, selection ) ->
                     case action of
-                        EnemyMove ->
+                        EnemyMove _ ->
                             Debug.todo "Implement enemy move"
 
-                        AllyMove _ move ->
+                        AllyMove _ _ move ->
                             if Utils.isPatternComplete move.recipe (List.reverse selection.liveInputs) then
                                 let
                                     newGame =
@@ -425,12 +453,28 @@ updateGame engineArgs msg game =
                         oldGame
                             |> updateEnemy (updateEnemyEnergy delta)
 
+                updateActionAnimation : Action -> Action
+                updateActionAnimation action =
+                    case action of
+                        EnemyMove timer ->
+                            EnemyMove (ActionTimer.handleAnimationFrame delta timer)
+
+                        AllyMove timer ally move ->
+                            AllyMove (ActionTimer.handleAnimationFrame delta timer) ally move
+
+                updateActionsAnimation : SelectionList Action Selection -> SelectionList Action Selection
+                updateActionsAnimation list =
+                    list
+                        |> SelectionList.mapUnselected updateActionAnimation
+
                 newGame : Game
                 newGame =
                     game
+                        |> updateActions updateActionsAnimation
                         |> updateParty (Party.handleAnimationFrame delta)
                         |> handleEnemyAttack
                         |> updateEnemy updateAnimation
+                        |> removeDoneActions
                         |> addNewAllyActions
             in
             if isGameLost newGame then
@@ -478,10 +522,10 @@ getAvailableInputs game =
         |> Result.map
             (\( action, _ ) ->
                 case action of
-                    AllyMove _ move ->
+                    AllyMove _ _ move ->
                         move.inputs
 
-                    EnemyMove ->
+                    EnemyMove _ ->
                         []
             )
         |> Result.withDefault []
@@ -588,15 +632,15 @@ renderActionList game =
             game.actions
 
         actionContainer =
-            "flex w-full h-12 items-center"
+            "flex w-full h-12 items-center overflow-hidden relative"
 
         actionContent =
-            "h-10 w-36 border border-black border-l-0 text-sm overflow-hidden flex justify-center items-center shadow-xl rounded-r cursor-pointer"
+            "h-10 w-36 border border-black border-l-0 text-sm overflow-hidden flex justify-center items-center shadow-xl rounded-r cursor-pointer absolute top-0"
 
         renderActionNumber : Int -> Msg -> Html Msg
         renderActionNumber index handleClick =
             div
-                [ class "h-full w-12 border-2 border-black border-l-0 flex justify-center items-center cursor-pointer"
+                [ class "h-full w-12 border-2 border-black border-l-0 flex justify-center items-center cursor-pointer bg-gray-100 z-10"
                 , onClick handleClick
                 ]
                 [ div [] [ text <| String.fromInt (index + 1) ] ]
@@ -604,35 +648,39 @@ renderActionList game =
         renderUnselectedAction : Int -> Action -> Html Msg
         renderUnselectedAction index action =
             case action of
-                EnemyMove ->
+                EnemyMove timer ->
                     div [ class actionContainer, onClick (SelectAction index) ]
                         [ renderActionNumber index (SelectAction index)
-                        , div [ class actionContent ]
+                        , div [ class actionContent, style "left" "-50%" ]
                             []
                         ]
 
-                AllyMove ally move ->
+                AllyMove timer ally move ->
                     div [ class actionContainer, onClick (SelectAction index) ]
                         [ renderActionNumber index (SelectAction index)
-                        , div [ class actionContent ]
-                            [ img [ src ally.stats.avatarUrl ] [] ]
+                        , div [ class "relative h-full w-36" ]
+                            [ div [ class actionContent, style "left" (String.fromFloat (ActionTimer.getLeft timer) ++ "%") ]
+                                [ img [ src ally.stats.avatarUrl ] [] ]
+                            ]
                         ]
 
         renderSelectedAction : Int -> ( Action, Selection ) -> Html Msg
         renderSelectedAction index ( action, selection ) =
             case action of
-                EnemyMove ->
+                EnemyMove _ ->
                     div [ class actionContainer, onClick DeselectAction ]
                         [ renderActionNumber index DeselectAction
                         , div [ class actionContent, class "border-dashed" ]
                             []
                         ]
 
-                AllyMove ally move ->
+                AllyMove _ ally move ->
                     div [ class actionContainer, onClick DeselectAction ]
                         [ renderActionNumber index DeselectAction
-                        , div [ class actionContent, class "border-dashed" ]
-                            [ img [ src ally.stats.avatarUrl ] [] ]
+                        , div [ class "relative h-full w-36" ]
+                            [ div [ class actionContent, class "border-dashed" ]
+                                [ img [ src ally.stats.avatarUrl ] [] ]
+                            ]
                         ]
 
         renderNothing : Int -> Html Msg
@@ -728,10 +776,10 @@ renderBottom game =
         Err _ ->
             div [] []
 
-        Ok ( AllyMove ally move, selection ) ->
+        Ok ( AllyMove _ ally move, selection ) ->
             renderAllyBottom ally move selection
 
-        Ok ( EnemyMove, _ ) ->
+        Ok ( EnemyMove _, _ ) ->
             div [] []
 
 
