@@ -6,6 +6,7 @@ import Ally exposing (Ally)
 import Animation exposing (Animation)
 import Browser
 import Browser.Events
+import Ease
 import Html exposing (Html, button, div, img, text)
 import Html.Attributes exposing (class, src, style)
 import Html.Events exposing (onClick)
@@ -20,7 +21,7 @@ import Utils
 
 allyActionTimings : ActionTimer.Timings
 allyActionTimings =
-    { slideOutTime = 75
+    { slideOutTime = 750
     , stayTime = 2000
     , slideInTime = 10000
     }

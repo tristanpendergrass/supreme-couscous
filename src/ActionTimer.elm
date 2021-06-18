@@ -1,5 +1,7 @@
 module ActionTimer exposing (ActionTimer, Timings, create, getLeft, handleAnimationFrame, isDone)
 
+import Ease
+
 
 type alias Timings =
     { slideOutTime : Float
@@ -25,7 +27,19 @@ handleAnimationFrame delta (ActionTimer timings time) =
 getLeft : ActionTimer -> Float
 getLeft (ActionTimer { slideOutTime, stayTime, slideInTime } time) =
     if time < slideOutTime then
-        -100 + time / slideOutTime * 100
+        let
+            percentDone : Float
+            percentDone =
+                time / slideOutTime
+
+            easedPercentDone : Float
+            easedPercentDone =
+                -- Tried a couple of the functions in Easing and settled on this one. Could be adjusted for taste.
+                Ease.outSine percentDone
+        in
+        -100
+            + easedPercentDone
+            * 100
 
     else if time < slideOutTime + stayTime then
         0
