@@ -1,17 +1,15 @@
 port module Engine exposing (EngineArgEnemy, Instance, create)
 
-import ActionList exposing (ActionList)
 import ActionTimer exposing (ActionTimer)
 import Ally exposing (Ally)
 import Animation exposing (Animation)
 import Browser
 import Browser.Events
-import Ease
 import Html exposing (Html, button, div, img, text)
 import Html.Attributes exposing (class, src, style)
 import Html.Events exposing (onClick)
 import Json.Decode as Decode
-import List.Extra exposing (mapAccuml)
+import List.Extra
 import Meter exposing (Meter)
 import Party exposing (Party)
 import Random
@@ -21,20 +19,10 @@ import Utils
 
 allyActionTimings : ActionTimer.Timings
 allyActionTimings =
-    { slideOutTime = 750
+    { slideOutTime = 500
     , stayTime = 2000
     , slideInTime = 10000
     }
-
-
-isJust : Maybe a -> Bool
-isJust maybe =
-    case maybe of
-        Nothing ->
-            False
-
-        _ ->
-            True
 
 
 images =
@@ -636,7 +624,7 @@ renderActionList game =
             "flex w-full h-12 items-center overflow-hidden relative"
 
         actionContent =
-            "h-10 w-36 border border-black border-l-0 text-sm overflow-hidden flex justify-center items-center shadow-xl rounded-r cursor-pointer absolute top-0"
+            "h-10 w-36 border border-black border-l-0 text-sm overflow-hidden flex justify-center items-center shadow rounded-r cursor-pointer absolute top-0 bottom-0 m-auto"
 
         renderActionNumber : Int -> Msg -> Html Msg
         renderActionNumber index handleClick =
