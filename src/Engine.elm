@@ -190,7 +190,7 @@ updateHealth fn game =
 
 updateEnemyEnergy : Float -> Enemy -> Enemy
 updateEnemyEnergy delta enemy =
-    { enemy | energy = Meter.handleAnimationFrame delta enemy.energy }
+    { enemy | energy = Meter.handleAnimationFrameRegen delta enemy.energy }
 
 
 addAction : Action -> Game -> Game
@@ -418,6 +418,14 @@ updateGame engineArgs msg game =
                     in
                     { obj | spriteAnimation = newAnimation }
 
+                updateHealthMeter : { a | health : Meter } -> { a | health : Meter }
+                updateHealthMeter obj =
+                    let
+                        newMeter =
+                            Meter.handleAnimationFrameDebounce delta obj.health
+                    in
+                    { obj | health = newMeter }
+
                 handleEnemyAttack : Game -> Game
                 handleEnemyAttack oldGame =
                     let
@@ -463,6 +471,7 @@ updateGame engineArgs msg game =
                         |> updateParty (Party.handleAnimationFrame delta)
                         |> handleEnemyAttack
                         |> updateEnemy updateAnimation
+                        |> updateEnemy updateHealthMeter
                         |> removeDoneActions
                         |> addNewAllyActions
             in

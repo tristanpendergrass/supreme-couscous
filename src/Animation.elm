@@ -28,7 +28,7 @@ updateAnimation delta (Animation animationType meter) =
         Nothing
 
     else
-        Just <| Animation animationType (Meter.handleAnimationFrame delta meter)
+        Just <| Animation animationType (Meter.handleAnimationFrameRegen delta meter)
 
 
 classForAnimation : Maybe Animation -> String

@@ -68,7 +68,7 @@ addShake ally =
 handleAnimationFrame : Float -> Ally -> Ally
 handleAnimationFrame delta ally =
     { ally
-        | energy = Meter.handleAnimationFrame delta ally.energy
+        | energy = Meter.handleAnimationFrameRegen delta ally.energy
         , spriteAnimation = Maybe.andThen (Animation.updateAnimation delta) ally.spriteAnimation
     }
 
