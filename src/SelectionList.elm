@@ -13,6 +13,7 @@ module SelectionList exposing
     , select
     )
 
+import Json.Decode exposing (maybe)
 import List.Extra
 import Maybe.Extra
 
@@ -47,7 +48,7 @@ clearSelection list =
             NoSelection length (List.concat [ first, [ Just el ], second ])
 
 
-select : d -> Int -> SelectionList t d -> Result String (SelectionList t d)
+select : d -> Int -> SelectionList t d -> Maybe (SelectionList t d)
 select initialData index selectionList =
     let
         list =
@@ -74,35 +75,34 @@ select initialData index selectionList =
             List.drop (index + 1) list
     in
     if index < List.length list then
-        case maybeEl of
-            Nothing ->
-                Err "Trying to select Nothing"
-
-            Just newSelection ->
-                Ok (HasSelection (getLength selectionList) newFirst newSelection newSecond)
+        maybeEl
+            |> Maybe.map
+                (\newSelection ->
+                    HasSelection (getLength selectionList) newFirst newSelection newSecond
+                )
 
     else
-        Err "Index is out of bounds"
+        Nothing
 
 
-mapSelection : (t -> d -> d) -> SelectionList t d -> Result String (SelectionList t d)
+mapSelection : (t -> d -> d) -> SelectionList t d -> Maybe (SelectionList t d)
 mapSelection fn selectionList =
     case selectionList of
         NoSelection _ _ ->
-            Err "Nothing is selected"
+            Nothing
 
         HasSelection length first ( el, data ) second ->
-            Ok <| HasSelection length first ( el, fn el data ) second
+            Just <| HasSelection length first ( el, fn el data ) second
 
 
-getSelected : SelectionList t d -> Result String ( t, d )
+getSelected : SelectionList t d -> Maybe ( t, d )
 getSelected selectionList =
     case selectionList of
         NoSelection _ _ ->
-            Err "Nothing is selected"
+            Nothing
 
         HasSelection _ _ selection _ ->
-            Ok selection
+            Just selection
 
 
 indexedMap : (Int -> t -> a) -> (Int -> ( t, d ) -> a) -> (Int -> a) -> SelectionList t d -> List a

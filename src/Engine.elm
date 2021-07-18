@@ -328,17 +328,16 @@ updateGame engineArgs msg game =
             ContinueGame ( newGame, Cmd.none )
 
         SelectAction position ->
-            case SelectionList.select { liveInputs = [] } position game.actions of
-                Err _ ->
-                    -- TODO: sound effect?
-                    noOp
-
-                Ok newActions ->
-                    let
-                        newGame =
-                            { game | actions = newActions }
-                    in
-                    ContinueGame ( newGame, emitSound sounds.select )
+            SelectionList.select { liveInputs = [] } position game.actions
+                |> Maybe.map
+                    (\newActions ->
+                        let
+                            newGame =
+                                { game | actions = newActions }
+                        in
+                        ContinueGame ( newGame, emitSound sounds.select )
+                    )
+                |> Maybe.withDefault noOp
 
         Input input ->
             let
@@ -365,24 +364,24 @@ updateGame engineArgs msg game =
                             else
                                 selection
             in
-            case SelectionList.mapSelection updateInputs game.actions of
-                Err _ ->
-                    noOp
-
-                Ok newActions ->
-                    let
-                        newGame =
-                            { game | actions = newActions }
-                    in
-                    ContinueGame ( newGame, emitSound sounds.attack )
+            SelectionList.mapSelection updateInputs game.actions
+                |> Maybe.map
+                    (\newActions ->
+                        let
+                            newGame =
+                                { game | actions = newActions }
+                        in
+                        ContinueGame ( newGame, emitSound sounds.attack )
+                    )
+                |> Maybe.withDefault noOp
 
         Finish ->
             case SelectionList.getSelected game.actions of
-                Err _ ->
+                Nothing ->
                     -- Finishing when nothing is selected shouldn't normally happen
                     noOp
 
-                Ok ( action, selection ) ->
+                Just ( action, selection ) ->
                     case action of
                         EnemyMove _ ->
                             Debug.todo "Implement enemy move"
@@ -517,7 +516,7 @@ tryAll things =
 getAvailableInputs : Game -> List Input
 getAvailableInputs game =
     SelectionList.getSelected game.actions
-        |> Result.map
+        |> Maybe.map
             (\( action, _ ) ->
                 case action of
                     AllyMove _ _ move ->
@@ -526,7 +525,7 @@ getAvailableInputs game =
                     EnemyMove _ ->
                         []
             )
-        |> Result.withDefault []
+        |> Maybe.withDefault []
 
 
 toUserInput : EngineArgs -> Game -> String -> Msg
@@ -771,13 +770,13 @@ renderTop game =
 renderBottom : Game -> Html Msg
 renderBottom game =
     case SelectionList.getSelected game.actions of
-        Err _ ->
+        Nothing ->
             div [] []
 
-        Ok ( AllyMove _ ally move, selection ) ->
+        Just ( AllyMove _ ally move, selection ) ->
             renderAllyBottom ally move selection
 
-        Ok ( EnemyMove _, _ ) ->
+        Just ( EnemyMove _, _ ) ->
             div [] []
 
 
