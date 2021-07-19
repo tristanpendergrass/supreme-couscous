@@ -87,9 +87,24 @@ type alias Enemy =
     }
 
 
-type Action
-    = AllyMove ActionTimer Ally Ally.Move
-    | EnemyMove ActionTimer
+type alias CommonActionData =
+    { id : Int
+    , timer : ActionTimer
+    , avatarUrl : String
+    , battleUrl : String
+    , tombstoneUrl : String
+    , maxEnergy : Int
+    }
+
+
+type ActionData
+    = KnightData ()
+
+
+type alias Action =
+    { commonData : CommonActionData
+    , actionData : ActionData
+    }
 
 
 type alias Game =
@@ -153,6 +168,11 @@ type Msg
     | Input Input
     | Finish
     | HandleAnimationFrame Float
+
+
+type KnightMsg
+    = Swing
+    | Stab
 
 
 updateParty : (Party -> Party) -> Game -> Game
@@ -223,9 +243,15 @@ addNewAllyActions =
 
                             actionTimer =
                                 ActionTimer.create allyActionTimings
+
+                            action : Action
+                            action =
+                                { commonData = Debug.todo "Create common data"
+                                , actionData = Debug.todo "Create action data based on move"
+                                }
                         in
                         accumGame
-                            |> addAction (AllyMove actionTimer ally move)
+                            |> addAction action
                             |> setSeed newSeed
 
             else
@@ -244,20 +270,15 @@ addNewAllyActions =
     addActions >> removeEnergy
 
 
-getTimer : Action -> ActionTimer
-getTimer action =
-    case action of
-        AllyMove actionTimer _ _ ->
-            actionTimer
-
-        EnemyMove actionTimer ->
-            actionTimer
-
-
-removeDoneActions : Game -> Game
-removeDoneActions game =
+removeExpiredActions : Game -> Game
+removeExpiredActions game =
+    let
+        isExpired : Action -> Bool
+        isExpired =
+            .commonData >> .timer >> ActionTimer.isDone >> not
+    in
     game
-        |> updateActions (SelectionList.filterUnselected (getTimer >> ActionTimer.isDone >> not))
+        |> updateActions (SelectionList.filterUnselected isExpired)
 
 
 applyOnSuccess : Ally.Move -> Game -> Game
@@ -340,71 +361,67 @@ updateGame engineArgs msg game =
                 |> Maybe.withDefault noOp
 
         Input input ->
-            let
-                updateInputs : Action -> Selection -> Selection
-                updateInputs action selection =
-                    case action of
-                        EnemyMove _ ->
-                            selection
-
-                        AllyMove _ _ move ->
-                            let
-                                nextInput : Maybe Input
-                                nextInput =
-                                    Utils.getNextInput move.recipe (List.reverse selection.liveInputs)
-
-                                inputMatches =
-                                    nextInput
-                                        |> Maybe.map ((==) input)
-                                        |> Maybe.withDefault False
-                            in
-                            if inputMatches then
-                                addInputToSelection input selection
-
-                            else
-                                selection
-            in
-            SelectionList.mapSelection updateInputs game.actions
-                |> Maybe.map
-                    (\newActions ->
-                        let
-                            newGame =
-                                { game | actions = newActions }
-                        in
-                        ContinueGame ( newGame, emitSound sounds.attack )
-                    )
-                |> Maybe.withDefault noOp
+            -- let
+            --     updateInputs : Action -> Selection -> Selection
+            --     updateInputs action selection =
+            --         case action of
+            --             EnemyMove _ ->
+            --                 selection
+            --             AllyMove _ _ move ->
+            --                 let
+            --                     nextInput : Maybe Input
+            --                     nextInput =
+            --                         Utils.getNextInput move.recipe (List.reverse selection.liveInputs)
+            --                     inputMatches =
+            --                         nextInput
+            --                             |> Maybe.map ((==) input)
+            --                             |> Maybe.withDefault False
+            --                 in
+            --                 if inputMatches then
+            --                     addInputToSelection input selection
+            --                 else
+            --                     selection
+            -- in
+            -- SelectionList.mapSelection updateInputs game.actions
+            --     |> Maybe.map
+            --         (\newActions ->
+            --             let
+            --                 newGame =
+            --                     { game | actions = newActions }
+            --             in
+            --             ContinueGame ( newGame, emitSound sounds.attack )
+            --         )
+            --     |> Maybe.withDefault noOp
+            Debug.todo "implement input"
 
         Finish ->
-            case SelectionList.getSelected game.actions of
-                Nothing ->
-                    -- Finishing when nothing is selected shouldn't normally happen
-                    noOp
-
-                Just ( action, selection ) ->
-                    case action of
-                        EnemyMove _ ->
-                            Debug.todo "Implement enemy move"
-
-                        AllyMove _ _ move ->
-                            if Utils.isPatternComplete move.recipe (List.reverse selection.liveInputs) then
-                                let
-                                    newGame =
-                                        game
-                                            |> applyOnSuccess move
-                                            |> updateActions SelectionList.deleteSelected
-                                            |> updateEnemy (\enemy -> { enemy | spriteAnimation = Just <| Animation.create Animation.Shake })
-                                in
-                                ContinueGame ( newGame, emitSound sounds.attack )
-
-                            else
-                                -- Finish was called without a completed pattern for a selected ally
-                                let
-                                    newGame =
-                                        game
-                                            |> updateActions SelectionList.deleteSelected
-                                in
-                                ContinueGame ( newGame, emitSound sounds.select )
+            -- case SelectionList.getSelected game.actions of
+            --     Nothing ->
+            --         -- Finishing when nothing is selected shouldn't normally happen
+            --         noOp
+            --     Just ( action, selection ) ->
+            --         case action of
+            --             EnemyMove _ ->
+            --                 Debug.todo "Implement enemy move"
+            --             AllyMove _ _ move ->
+            --                 if Utils.isPatternComplete move.recipe (List.reverse selection.liveInputs) then
+            --                     let
+            --                         newGame =
+            --                             game
+            --                                 |> applyOnSuccess move
+            --                                 |> updateActions SelectionList.deleteSelected
+            --                                 |> updateEnemy (\enemy -> { enemy | spriteAnimation = Just <| Animation.create Animation.Shake })
+            --                     in
+            --                     ContinueGame ( newGame, emitSound sounds.attack )
+            --                 else
+            --                     -- Finish was called without a completed pattern for a selected ally
+            --                     let
+            --                         newGame =
+            --                             game
+            --                                 |> updateActions SelectionList.deleteSelected
+            --                     in
+            --                     ContinueGame ( newGame, emitSound sounds.select )
+            Debug.todo "Implement Finish"
 
         HandleAnimationFrame delta ->
             let
@@ -451,12 +468,14 @@ updateGame engineArgs msg game =
 
                 updateActionAnimation : Action -> Action
                 updateActionAnimation action =
-                    case action of
-                        EnemyMove timer ->
-                            EnemyMove (ActionTimer.handleAnimationFrame delta timer)
+                    let
+                        { commonData } =
+                            action
 
-                        AllyMove timer ally move ->
-                            AllyMove (ActionTimer.handleAnimationFrame delta timer) ally move
+                        newTimer =
+                            ActionTimer.handleAnimationFrame delta action.commonData.timer
+                    in
+                    { action | commonData = { commonData | timer = newTimer } }
 
                 updateActionsAnimation : SelectionList Action Selection -> SelectionList Action Selection
                 updateActionsAnimation list =
@@ -471,7 +490,7 @@ updateGame engineArgs msg game =
                         |> handleEnemyAttack
                         |> updateEnemy updateAnimation
                         |> updateEnemy updateHealthMeter
-                        |> removeDoneActions
+                        |> removeExpiredActions
                         |> addNewAllyActions
             in
             if isGameLost newGame then
@@ -518,12 +537,7 @@ getAvailableInputs game =
     SelectionList.getSelected game.actions
         |> Maybe.map
             (\( action, _ ) ->
-                case action of
-                    AllyMove _ _ move ->
-                        move.inputs
-
-                    EnemyMove _ ->
-                        []
+                Debug.todo "Implement getAvailableInputs"
             )
         |> Maybe.withDefault []
 
@@ -644,41 +658,23 @@ renderActionList game =
 
         renderUnselectedAction : Int -> Action -> Html Msg
         renderUnselectedAction index action =
-            case action of
-                EnemyMove timer ->
-                    div [ class actionContainer, onClick (SelectAction index) ]
-                        [ renderActionNumber index (SelectAction index)
-                        , div [ class actionContent, style "left" "-50%" ]
-                            []
-                        ]
-
-                AllyMove timer ally move ->
-                    div [ class actionContainer, onClick (SelectAction index) ]
-                        [ renderActionNumber index (SelectAction index)
-                        , div [ class "relative h-full w-36" ]
-                            [ div [ class actionContent, style "left" (String.fromFloat (ActionTimer.getLeft timer) ++ "%") ]
-                                [ img [ src ally.stats.avatarUrl ] [] ]
-                            ]
-                        ]
+            div [ class actionContainer, onClick (SelectAction index) ]
+                [ renderActionNumber index (SelectAction index)
+                , div [ class "relative h-full w-36" ]
+                    [ div [ class actionContent, style "left" (String.fromFloat (ActionTimer.getLeft action.commonData.timer) ++ "%") ]
+                        [ img [ src action.commonData.avatarUrl ] [] ]
+                    ]
+                ]
 
         renderSelectedAction : Int -> ( Action, Selection ) -> Html Msg
         renderSelectedAction index ( action, selection ) =
-            case action of
-                EnemyMove _ ->
-                    div [ class actionContainer, onClick DeselectAction ]
-                        [ renderActionNumber index DeselectAction
-                        , div [ class actionContent, class "border-dashed" ]
-                            []
-                        ]
-
-                AllyMove _ ally move ->
-                    div [ class actionContainer, onClick DeselectAction ]
-                        [ renderActionNumber index DeselectAction
-                        , div [ class "relative h-full w-36" ]
-                            [ div [ class actionContent, class "border-dashed" ]
-                                [ img [ src ally.stats.avatarUrl ] [] ]
-                            ]
-                        ]
+            div [ class actionContainer, onClick DeselectAction ]
+                [ renderActionNumber index DeselectAction
+                , div [ class "relative h-full w-36" ]
+                    [ div [ class actionContent, class "border-dashed" ]
+                        [ img [ src action.commonData.avatarUrl ] [] ]
+                    ]
+                ]
 
         renderNothing : Int -> Html Msg
         renderNothing index =
@@ -767,17 +763,19 @@ renderTop game =
         ]
 
 
+renderBottomAction : Action -> Selection -> Html Msg
+renderBottomAction action selection =
+    Debug.todo "Implement renderBottomAction (Refer to renderAllyBottom)"
+
+
 renderBottom : Game -> Html Msg
 renderBottom game =
     case SelectionList.getSelected game.actions of
         Nothing ->
             div [] []
 
-        Just ( AllyMove _ ally move, selection ) ->
-            renderAllyBottom ally move selection
-
-        Just ( EnemyMove _, _ ) ->
-            div [] []
+        Just ( action, selection ) ->
+            renderBottomAction action selection
 
 
 renderAllyBottom : Ally -> Ally.Move -> Selection -> Html Msg
