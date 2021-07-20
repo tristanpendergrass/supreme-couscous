@@ -1,7 +1,6 @@
 module Ally exposing
     ( Ally
     , Effect(..)
-    , Move
     , Stats
     , addShake
     , create
@@ -11,6 +10,7 @@ module Ally exposing
     , handleAnimationFrame
     )
 
+import Action exposing (Action)
 import Animation exposing (Animation)
 import Meter exposing (Meter)
 
@@ -23,19 +23,20 @@ type Effect
     = Damage Int
 
 
-type alias Move =
-    { onSuccess : List Effect
-    , prompt : String
-    , recipe : List Input
-    , inputs : List Input
-    }
+
+-- type alias Move =
+--     { onSuccess : List Effect
+--     , prompt : String
+--     , recipe : List Input
+--     , inputs : List Input
+--     }
 
 
 type alias Stats =
     { avatarUrl : String
     , battleUrl : String
     , tombstoneUrl : String
-    , moves : List Move
+    , moves : List Action
     , maxEnergy : Int
     }
 

@@ -1,5 +1,6 @@
 port module Engine exposing (EngineArgEnemy, Instance, create)
 
+import Action exposing (Action)
 import ActionTimer exposing (ActionTimer)
 import Ally exposing (Ally)
 import Animation exposing (Animation)
@@ -87,24 +88,6 @@ type alias Enemy =
     }
 
 
-type alias CommonActionData =
-    { id : Int
-    , timer : ActionTimer
-    , avatarUrl : String
-    , battleUrl : String
-    , tombstoneUrl : String
-    , maxEnergy : Int
-    }
-
-
-type ActionData
-    = KnightData ()
-
-
-type alias Action =
-    { commonData : CommonActionData
-    , actionData : ActionData
-    }
 
 
 type alias Game =
@@ -244,10 +227,22 @@ addNewAllyActions =
                             actionTimer =
                                 ActionTimer.create allyActionTimings
 
+                            commonData : CommonActionData
+                            commonData =
+                                { id = 0
+                                , timer = actionTimer
+                                , avatarUrl = ally.stats.avatarUrl
+                                , maxEnergy = ally.stats.maxEnergy
+                                }
+
+                            actionData : ActionData
+                            actionData =
+                                KnightData ()
+
                             action : Action
                             action =
-                                { commonData = Debug.todo "Create common data"
-                                , actionData = Debug.todo "Create action data based on move"
+                                { commonData = commonData
+                                , actionData = actionData
                                 }
                         in
                         accumGame
@@ -764,7 +759,10 @@ renderTop game =
 
 
 renderBottomAction : Action -> Selection -> Html Msg
-renderBottomAction action selection =
+renderBottomAction {commonData, actionData} selection =
+    case actionData of
+
+        
     Debug.todo "Implement renderBottomAction (Refer to renderAllyBottom)"
 
 
