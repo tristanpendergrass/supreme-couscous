@@ -18,14 +18,6 @@ import SelectionList exposing (SelectionList)
 import Utils
 
 
-allyActionTimings : ActionTimer.Timings
-allyActionTimings =
-    { slideOutTime = 500
-    , stayTime = 2000
-    , slideInTime = 10000
-    }
-
-
 images =
     { selectionArrow = "arrow.png"
     , battleSelection = "battle_selection_2.png"
@@ -90,7 +82,8 @@ type alias Enemy =
 
 
 type alias Game =
-    { seed : Random.Seed
+    { nonce : Int
+    , seed : Random.Seed
     , party : Party
     , enemy : Enemy
     , actions : SelectionList Action Selection
@@ -126,7 +119,8 @@ init engineArgs _ =
             SelectionList.create 5
     in
     ( GameInProgress
-        { seed = Random.initialSeed 0
+        { nonce = 0
+        , seed = Random.initialSeed 0
         , party = initialParty
         , enemy = initialEnemy
         , actions = initialActions
@@ -195,6 +189,11 @@ updateEnemyEnergy delta enemy =
     { enemy | energy = Meter.handleAnimationFrameRegen delta enemy.energy }
 
 
+incrementNonce : Game -> Game
+incrementNonce game =
+    { game | nonce = game.nonce + 1 }
+
+
 addAction : Action -> Game -> Game
 addAction action =
     updateActions (SelectionList.push action)
@@ -217,34 +216,18 @@ addNewAllyActions =
 
                     first :: rest ->
                         let
-                            randomMove =
+                            randomActionType =
                                 Random.uniform first rest
 
-                            ( move, newSeed ) =
-                                Random.step randomMove accumGame.seed
-
-                            actionTimer =
-                                ActionTimer.create allyActionTimings
-
-                            commonData : CommonActionData
-                            commonData =
-                                { id = 0
-                                , timer = actionTimer
-                                , avatarUrl = ally.stats.avatarUrl
-                                , maxEnergy = ally.stats.maxEnergy
-                                }
-
-                            actionData : ActionData
-                            actionData =
-                                KnightData ()
+                            ( actionType, newSeed ) =
+                                Random.step randomActionType accumGame.seed
 
                             action : Action
                             action =
-                                { commonData = commonData
-                                , actionData = actionData
-                                }
+                                Action.create accumGame.nonce actionType
                         in
                         accumGame
+                            |> incrementNonce
                             |> addAction action
                             |> setSeed newSeed
 
@@ -266,25 +249,20 @@ addNewAllyActions =
 
 removeExpiredActions : Game -> Game
 removeExpiredActions game =
-    let
-        isExpired : Action -> Bool
-        isExpired =
-            .commonData >> .timer >> ActionTimer.isDone >> not
-    in
     game
-        |> updateActions (SelectionList.filterUnselected isExpired)
+        |> updateActions (SelectionList.filterUnselected Action.isExpired)
 
 
-applyOnSuccess : Ally.Move -> Game -> Game
-applyOnSuccess move game =
+applyOnSuccess : Action -> Game -> Game
+applyOnSuccess action game =
     let
         effects =
-            move.onSuccess
+            (Action.stats action.actionType).onSuccess
 
-        applyEffect : Ally.Effect -> Game -> Game
+        applyEffect : Action.Effect -> Game -> Game
         applyEffect effect g =
             case effect of
-                Ally.Damage amount ->
+                Action.Damage amount ->
                     dealDamageToEnemy amount g
     in
     List.foldl applyEffect game effects
@@ -463,13 +441,10 @@ updateGame engineArgs msg game =
                 updateActionAnimation : Action -> Action
                 updateActionAnimation action =
                     let
-                        { commonData } =
-                            action
-
                         newTimer =
-                            ActionTimer.handleAnimationFrame delta action.commonData.timer
+                            ActionTimer.handleAnimationFrame delta action.timer
                     in
-                    { action | commonData = { commonData | timer = newTimer } }
+                    { action | timer = newTimer }
 
                 updateActionsAnimation : SelectionList Action Selection -> SelectionList Action Selection
                 updateActionsAnimation list =
@@ -655,8 +630,8 @@ renderActionList game =
             div [ class actionContainer, onClick (SelectAction index) ]
                 [ renderActionNumber index (SelectAction index)
                 , div [ class "relative h-full w-36" ]
-                    [ div [ class actionContent, style "left" (String.fromFloat (ActionTimer.getLeft action.commonData.timer) ++ "%") ]
-                        [ img [ src action.commonData.avatarUrl ] [] ]
+                    [ div [ class actionContent, style "left" (String.fromFloat (ActionTimer.getLeft action.timer) ++ "%") ]
+                        [ img [ src (Action.stats action.actionType).avatarUrl ] [] ]
                     ]
                 ]
 
@@ -666,7 +641,7 @@ renderActionList game =
                 [ renderActionNumber index DeselectAction
                 , div [ class "relative h-full w-36" ]
                     [ div [ class actionContent, class "border-dashed" ]
-                        [ img [ src action.commonData.avatarUrl ] [] ]
+                        [ img [ src (Action.stats action.actionType).avatarUrl ] [] ]
                     ]
                 ]
 
@@ -758,7 +733,7 @@ renderTop game =
 
 
 renderBottomAction : Action -> Selection -> Html Msg
-renderBottomAction { commonData, actionData } selection =
+renderBottomAction action selection =
     Debug.todo "Implement renderBottomAction (Refer to renderAllyBottom)"
 
 
@@ -772,68 +747,68 @@ renderBottom game =
             renderBottomAction action selection
 
 
-renderAllyBottom : Ally -> Ally.Move -> Selection -> Html Msg
-renderAllyBottom ally move selection =
-    let
-        renderPortrait : Html Msg
-        renderPortrait =
-            div [ class "overflow-hidden w-48 h-48 relative" ]
-                [ div [ class "bg-blue-200 border-4 border-gray-900" ] [ img [ src ally.stats.avatarUrl, class "bg-blue-200" ] [] ]
-                ]
+renderAllyBottom : Action -> Selection -> Html Msg
+renderAllyBottom action selection =
+    Debug.todo "Implement render ally bottom"
 
-        renderPrompt : Html Msg
-        renderPrompt =
-            div [ class "w-64 h-48" ]
-                [ div [ class "italic" ] [ text move.prompt ]
-                ]
 
-        renderInput : Input -> Html Msg
-        renderInput input =
-            let
-                ( trigger, name ) =
-                    input
-            in
-            button [ class inputContainer, onClick (Input input) ]
-                [ div [ class inputTrigger ] [ text <| String.fromChar trigger ]
-                , div [ class inputLabel ] [ text name ]
-                ]
 
-        renderFinish : Html Msg
-        renderFinish =
-            button [ class inputContainer, onClick Finish ]
-                [ div [ class inputTrigger ] [ text "Enter" ]
-                , div [ class inputLabel ] [ text "Finish" ]
-                ]
-
-        renderMove : Html Msg
-        renderMove =
-            div [ class "w-96 h-48 " ]
-                [ div [ class "h-full w-full flex-col" ]
-                    [ div [ class "w-96 h-40" ]
-                        [ move.inputs
-                            |> List.map renderInput
-                            |> div [ class "flex space-x-2 flex-wrap" ]
-                        ]
-                    , div [ class "w-96 h-8" ] [ renderFinish ]
-                    ]
-                ]
-
-        renderLiveInput : Input -> Html Msg
-        renderLiveInput ( _, label ) =
-            div [] [ text label ]
-
-        renderInputs : Html Msg
-        renderInputs =
-            div [ class "flex-grow h-48 border border-gray-900" ]
-                [ div [ class "flex-col" ] (List.map renderLiveInput selection.liveInputs)
-                ]
-    in
-    div [ class "w-full h-full border-gray-500 border-4 bg-gray-400 flex items-center p-2 space-x-2" ]
-        [ renderPortrait
-        , renderPrompt
-        , renderMove
-        , renderInputs
-        ]
+-- let
+--     stats =
+--         Action.stats action.actionType
+--     renderPortrait : Html Msg
+--     renderPortrait =
+--         div [ class "overflow-hidden w-48 h-48 relative" ]
+--             [ div [ class "bg-blue-200 border-4 border-gray-900" ] [ img [ src stats.avatarUrl, class "bg-blue-200" ] [] ]
+--             ]
+--     renderPrompt : Html Msg
+--     renderPrompt =
+--         div [ class "w-64 h-48" ]
+--             [ div [ class "italic" ] [ text move.prompt ]
+--             ]
+--     renderInput : Input -> Html Msg
+--     renderInput input =
+--         let
+--             ( trigger, name ) =
+--                 input
+--         in
+--         button [ class inputContainer, onClick (Input input) ]
+--             [ div [ class inputTrigger ] [ text <| String.fromChar trigger ]
+--             , div [ class inputLabel ] [ text name ]
+--             ]
+--     renderFinish : Html Msg
+--     renderFinish =
+--         button [ class inputContainer, onClick Finish ]
+--             [ div [ class inputTrigger ] [ text "Enter" ]
+--             , div [ class inputLabel ] [ text "Finish" ]
+--             ]
+--     renderMove : Html Msg
+--     renderMove =
+--         div [ class "w-96 h-48 " ]
+--             [ div [ class "h-full w-full flex-col" ]
+--                 [ div [ class "w-96 h-40" ]
+--                     [ move.inputs
+--                         |> List.map renderInput
+--                         |> div [ class "flex space-x-2 flex-wrap" ]
+--                     ]
+--                 , div [ class "w-96 h-8" ] [ renderFinish ]
+--                 ]
+--             ]
+--     renderLiveInput : Input -> Html Msg
+--     renderLiveInput ( _, label ) =
+--         div [] [ text label ]
+--     renderInputs : Html Msg
+--     renderInputs =
+--         div [ class "flex-grow h-48 border border-gray-900" ]
+--             [ div [ class "flex-col" ] (List.map renderLiveInput selection.liveInputs)
+--             ]
+-- in
+-- div [ class "w-full h-full border-gray-500 border-4 bg-gray-400 flex items-center p-2 space-x-2" ]
+--     [ renderPortrait
+--     , renderPrompt
+--     , renderMove
+--     , renderInputs
+--     ]
 
 
 view : EngineArgs -> Model -> Html Msg

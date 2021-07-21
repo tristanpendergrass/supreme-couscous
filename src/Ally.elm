@@ -1,10 +1,8 @@
 module Ally exposing
     ( Ally
-    , Effect(..)
     , Stats
     , addShake
     , create
-    , damage
     , drainEnergyIfFull
     , energyIsFull
     , handleAnimationFrame
@@ -17,10 +15,6 @@ import Meter exposing (Meter)
 
 type alias Input =
     ( Char, String )
-
-
-type Effect
-    = Damage Int
 
 
 
@@ -46,11 +40,6 @@ type alias Ally =
     , energy : Meter
     , spriteAnimation : Maybe Animation
     }
-
-
-damage : Int -> Effect
-damage =
-    Damage
 
 
 create : Stats -> Ally
