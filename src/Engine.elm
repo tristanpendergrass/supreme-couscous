@@ -1,6 +1,6 @@
 port module Engine exposing (EngineArgEnemy, Instance, create)
 
-import Action exposing (Action)
+import Action exposing (Action, ActionType)
 import ActionTimer exposing (ActionTimer)
 import Ally exposing (Ally)
 import Animation exposing (Animation)
@@ -50,6 +50,7 @@ type alias EngineArgEnemy =
     { battleUrl : String
     , maxHealth : Int
     , maxEnergy : Int
+    , moves : List ActionType
     , damage : Int
     }
 
@@ -86,8 +87,6 @@ type alias Enemy =
     , energy : Meter
     , spriteAnimation : Maybe Animation
     }
-
-
 
 
 type alias Game =
@@ -759,10 +758,7 @@ renderTop game =
 
 
 renderBottomAction : Action -> Selection -> Html Msg
-renderBottomAction {commonData, actionData} selection =
-    case actionData of
-
-        
+renderBottomAction { commonData, actionData } selection =
     Debug.todo "Implement renderBottomAction (Refer to renderAllyBottom)"
 
 

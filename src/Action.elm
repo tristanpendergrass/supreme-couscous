@@ -27,21 +27,21 @@ stats : Action -> Stats
 stats action =
     case action.actionType of
         KnightAttack ->
-            { avatarUrl = ""
+            { avatarUrl = "knight_portrait.png"
             , maxEnergy = 100
             }
 
         ThiefAttack ->
-            { avatarUrl = ""
+            { avatarUrl = "thief_portrait.png"
             , maxEnergy = 100
             }
 
         PriestAttack ->
-            { avatarUrl = ""
+            { avatarUrl = "priest_portrait.png"
             , maxEnergy = 100
             }
 
         EnemyAttack ->
-            { avatarUrl = ""
+            { avatarUrl = "red_boy.png"
             , maxEnergy = 100
             }

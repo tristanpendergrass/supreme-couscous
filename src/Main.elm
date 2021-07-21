@@ -1,5 +1,6 @@
 module Main exposing (main)
 
+import Action exposing (ActionType(..))
 import Ally
 import Engine
 
@@ -10,17 +11,7 @@ allyOne =
     , battleUrl = "thief.png"
     , tombstoneUrl = "thief_tombstone.png"
     , moves =
-        [ { onSuccess = [ Ally.damage 5 ]
-          , prompt = "A quick jab, followed by a slash..."
-          , recipe =
-                [ ( 'j', "Jab" )
-                , ( 's', "Slash" )
-                ]
-          , inputs =
-                [ ( 'j', "Jab" )
-                , ( 's', "Slash" )
-                ]
-          }
+        [ ThiefAttack
         ]
     , maxEnergy = 100
     }
@@ -32,18 +23,7 @@ allyTwo =
     , battleUrl = "knight.png"
     , tombstoneUrl = "knight_tombstone.png"
     , moves =
-        [ { onSuccess = [ Ally.damage 15 ]
-          , prompt = "Analyze the opponent's weak spots and then strike twice..."
-          , recipe =
-                [ ( 'a', "Analyze" )
-                , ( 's', "Strike" )
-                , ( 's', "Strike" )
-                ]
-          , inputs =
-                [ ( 'a', "Analyze" )
-                , ( 's', "Strike" )
-                ]
-          }
+        [ KnightAttack
         ]
     , maxEnergy = 150
     }
@@ -55,19 +35,7 @@ allyThree =
     , battleUrl = "priest.png"
     , tombstoneUrl = "priest_tombstone.png"
     , moves =
-        [ { onSuccess = [ Ally.damage 10 ]
-          , prompt = "Focus, determination, and then yell 'hoody hoo!'..."
-          , recipe =
-                [ ( 'f', "Focus" )
-                , ( 'd', "Determination" )
-                , ( 'h', "Hoody Hoo!" )
-                ]
-          , inputs =
-                [ ( 'f', "Focus" )
-                , ( 'd', "Determination" )
-                , ( 'h', "Hoody Hoo!" )
-                ]
-          }
+        [ PriestAttack
         ]
     , maxEnergy = 185
     }
@@ -75,7 +43,7 @@ allyThree =
 
 enemy : Engine.EngineArgEnemy
 enemy =
-    { battleUrl = "red_boy.png", maxHealth = 80, maxEnergy = 30, damage = 25 }
+    { battleUrl = "red_boy.png", moves = [ EnemyAttack ], maxHealth = 80, maxEnergy = 30, damage = 25 }
 
 
 main : Engine.Instance

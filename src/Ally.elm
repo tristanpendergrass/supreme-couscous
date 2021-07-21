@@ -10,7 +10,7 @@ module Ally exposing
     , handleAnimationFrame
     )
 
-import Action exposing (Action)
+import Action exposing (Action, ActionType(..))
 import Animation exposing (Animation)
 import Meter exposing (Meter)
 
@@ -36,7 +36,7 @@ type alias Stats =
     { avatarUrl : String
     , battleUrl : String
     , tombstoneUrl : String
-    , moves : List Action
+    , moves : List ActionType
     , maxEnergy : Int
     }
 
