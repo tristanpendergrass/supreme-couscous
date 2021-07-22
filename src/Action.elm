@@ -9,6 +9,7 @@ module Action exposing
     )
 
 import ActionTimer exposing (ActionTimer)
+import Html exposing (Html)
 
 
 type alias Action =

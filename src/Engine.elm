@@ -63,14 +63,11 @@ create engineArgs =
 -- MODEL
 
 
-addInputToSelection : Input -> Selection -> Selection
-addInputToSelection input selection =
-    { selection | liveInputs = input :: selection.liveInputs }
-
-
-type alias Selection =
-    { liveInputs : List Input
-    }
+type Selection
+    = KnightSelection (List String)
+    | ThiefSelection
+    | PriestSelection
+    | EnemySelection
 
 
 type alias Enemy =
@@ -321,7 +318,7 @@ updateGame engineArgs msg game =
             ContinueGame ( newGame, Cmd.none )
 
         SelectAction position ->
-            SelectionList.select { liveInputs = [] } position game.actions
+            SelectionList.select (KnightSelection []) position game.actions
                 |> Maybe.map
                     (\newActions ->
                         let
@@ -739,12 +736,23 @@ renderBottomAction action selection =
 
 renderBottom : Game -> Html Msg
 renderBottom game =
-    case SelectionList.getSelected game.actions of
-        Nothing ->
-            div [] []
+    SelectionList.getSelected game.actions
+        |> Maybe.map
+            (\( _, selection ) ->
+                case selection of
+                    KnightSelection strings ->
+                        div [] [ text "Knight Selection" ]
 
-        Just ( action, selection ) ->
-            renderBottomAction action selection
+                    ThiefSelection ->
+                        div [] [ text "Thief Selection" ]
+
+                    PriestSelection ->
+                        div [] [ text "Priest Selection" ]
+
+                    EnemySelection ->
+                        div [] [ text "Enemy Selection" ]
+            )
+        |> Maybe.withDefault (div [] [ text "Nothing Selected" ])
 
 
 renderAllyBottom : Action -> Selection -> Html Msg
