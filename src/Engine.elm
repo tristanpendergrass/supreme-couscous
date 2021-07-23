@@ -247,7 +247,7 @@ addNewAllyActions =
 removeExpiredActions : Game -> Game
 removeExpiredActions game =
     game
-        |> updateActions (SelectionList.filterUnselected Action.isExpired)
+        |> updateActions (SelectionList.filterUnselected (Action.isExpired >> not))
 
 
 applyOnSuccess : Action -> Game -> Game
@@ -741,18 +741,18 @@ renderBottom game =
             (\( _, selection ) ->
                 case selection of
                     KnightSelection strings ->
-                        div [] [ text "Knight Selection" ]
+                        div [ class "text-gray-100" ] [ text "Knight Selection" ]
 
                     ThiefSelection ->
-                        div [] [ text "Thief Selection" ]
+                        div [ class "text-gray-100" ] [ text "Thief Selection" ]
 
                     PriestSelection ->
-                        div [] [ text "Priest Selection" ]
+                        div [ class "text-gray-100" ] [ text "Priest Selection" ]
 
                     EnemySelection ->
-                        div [] [ text "Enemy Selection" ]
+                        div [ class "text-gray-100" ] [ text "Enemy Selection" ]
             )
-        |> Maybe.withDefault (div [] [ text "Nothing Selected" ])
+        |> Maybe.withDefault (div [ class "text-gray-100" ] [ text "Nothing Selected" ])
 
 
 renderAllyBottom : Action -> Selection -> Html Msg
