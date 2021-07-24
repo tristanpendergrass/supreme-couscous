@@ -48,8 +48,8 @@ clearSelection list =
             NoSelection length (List.concat [ first, [ Just el ], second ])
 
 
-select : d -> Int -> SelectionList t d -> Maybe (SelectionList t d)
-select initialData index selectionList =
+select : (t -> d) -> Int -> SelectionList t d -> Maybe (SelectionList t d)
+select initialDataFn index selectionList =
     let
         list =
             case selectionList of
@@ -66,7 +66,7 @@ select initialData index selectionList =
         maybeEl =
             case List.Extra.getAt index list of
                 Just (Just el) ->
-                    Just ( el, initialData )
+                    Just ( el, initialDataFn el )
 
                 _ ->
                     Nothing

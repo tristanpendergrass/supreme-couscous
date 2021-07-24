@@ -318,7 +318,23 @@ updateGame engineArgs msg game =
             ContinueGame ( newGame, Cmd.none )
 
         SelectAction position ->
-            SelectionList.select (KnightSelection []) position game.actions
+            let
+                createSelectionData : Action -> Selection
+                createSelectionData { actionType } =
+                    case actionType of
+                        Action.KnightAttack ->
+                            KnightSelection []
+
+                        Action.ThiefAttack ->
+                            ThiefSelection
+
+                        Action.PriestAttack ->
+                            PriestSelection
+
+                        Action.EnemyAttack ->
+                            EnemySelection
+            in
+            SelectionList.select createSelectionData position game.actions
                 |> Maybe.map
                     (\newActions ->
                         let
