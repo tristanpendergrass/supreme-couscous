@@ -1,9 +1,11 @@
 module Action exposing
     ( Action
+    , ActionModel(..)
     , ActionType(..)
     , Effect(..)
     , create
     , damage
+    , getModel
     , isExpired
     , stats
     )
@@ -12,11 +14,11 @@ import ActionTimer exposing (ActionTimer)
 import Html exposing (Html)
 
 
-type alias Action =
-    { id : Int
-    , timer : ActionTimer
-    , actionType : ActionType
-    }
+type Action
+    = Action ActionType Int ActionTimer
+
+type SelectedAction
+    = SelectedAction ActionType Int ActionTimer
 
 
 type ActionType
@@ -24,6 +26,31 @@ type ActionType
     | ThiefAttack
     | PriestAttack
     | EnemyAttack
+
+
+type ActionModel
+    = KnightModel
+    | ThiefModel
+    | PriestModel
+    | EnemyModel
+
+getSelectedAction : Action -> SelectedAction
+getSelectedAction action =
+
+getModel : Action -> ActionModel
+getModel (Action actionType _ _) =
+    case actionType of
+        KnightAttack ->
+            KnightModel
+
+        ThiefAttack ->
+            ThiefModel
+
+        PriestAttack ->
+            PriestModel
+
+        EnemyAttack ->
+            EnemyModel
 
 
 type alias Stats =

@@ -83,7 +83,7 @@ type alias Game =
     , seed : Random.Seed
     , party : Party
     , enemy : Enemy
-    , actions : SelectionList Action Selection
+    , actions : SelectionList Action.ActionType Action.ActionModel
     , health : Meter
     }
 
@@ -745,19 +745,14 @@ renderTop game =
         ]
 
 
-renderBottomAction : Action -> Selection -> Html Msg
-renderBottomAction action selection =
-    Debug.todo "Implement renderBottomAction (Refer to renderAllyBottom)"
-
-
 renderBottom : Game -> Html Msg
 renderBottom game =
     SelectionList.getSelected game.actions
         |> Maybe.map
-            (\( _, selection ) ->
+            (\( action, selection ) ->
                 case selection of
                     KnightSelection strings ->
-                        div [ class "text-gray-100" ] [ text "Knight Selection" ]
+                        renderKnightBottom action strings
 
                     ThiefSelection ->
                         div [ class "text-gray-100" ] [ text "Thief Selection" ]
@@ -771,68 +766,74 @@ renderBottom game =
         |> Maybe.withDefault (div [ class "text-gray-100" ] [ text "Nothing Selected" ])
 
 
-renderAllyBottom : Action -> Selection -> Html Msg
-renderAllyBottom action selection =
-    Debug.todo "Implement render ally bottom"
+renderKnightBottom : Action -> List String -> Html Msg
+renderKnightBottom action strings =
+    let
+        stats =
+            Action.stats action.actionType
 
+        renderPortrait : Html Msg
+        renderPortrait =
+            div [ class "overflow-hidden w-48 h-48 relative" ]
+                [ div [ class "bg-blue-200 border-4 border-gray-900" ] [ img [ src stats.avatarUrl, class "bg-blue-200" ] [] ]
+                ]
 
+        renderPrompt : Html Msg
+        renderPrompt =
+            div [ class "w-64 h-48" ]
+                [ div [ class "italic" ] [ text "Knight move" ]
+                ]
 
--- let
---     stats =
---         Action.stats action.actionType
---     renderPortrait : Html Msg
---     renderPortrait =
---         div [ class "overflow-hidden w-48 h-48 relative" ]
---             [ div [ class "bg-blue-200 border-4 border-gray-900" ] [ img [ src stats.avatarUrl, class "bg-blue-200" ] [] ]
---             ]
---     renderPrompt : Html Msg
---     renderPrompt =
---         div [ class "w-64 h-48" ]
---             [ div [ class "italic" ] [ text move.prompt ]
---             ]
---     renderInput : Input -> Html Msg
---     renderInput input =
---         let
---             ( trigger, name ) =
---                 input
---         in
---         button [ class inputContainer, onClick (Input input) ]
---             [ div [ class inputTrigger ] [ text <| String.fromChar trigger ]
---             , div [ class inputLabel ] [ text name ]
---             ]
---     renderFinish : Html Msg
---     renderFinish =
---         button [ class inputContainer, onClick Finish ]
---             [ div [ class inputTrigger ] [ text "Enter" ]
---             , div [ class inputLabel ] [ text "Finish" ]
---             ]
---     renderMove : Html Msg
---     renderMove =
---         div [ class "w-96 h-48 " ]
---             [ div [ class "h-full w-full flex-col" ]
---                 [ div [ class "w-96 h-40" ]
---                     [ move.inputs
---                         |> List.map renderInput
---                         |> div [ class "flex space-x-2 flex-wrap" ]
---                     ]
---                 , div [ class "w-96 h-8" ] [ renderFinish ]
---                 ]
---             ]
---     renderLiveInput : Input -> Html Msg
---     renderLiveInput ( _, label ) =
---         div [] [ text label ]
---     renderInputs : Html Msg
---     renderInputs =
---         div [ class "flex-grow h-48 border border-gray-900" ]
---             [ div [ class "flex-col" ] (List.map renderLiveInput selection.liveInputs)
---             ]
--- in
--- div [ class "w-full h-full border-gray-500 border-4 bg-gray-400 flex items-center p-2 space-x-2" ]
---     [ renderPortrait
---     , renderPrompt
---     , renderMove
---     , renderInputs
---     ]
+        renderInput : Input -> Html Msg
+        renderInput input =
+            let
+                ( trigger, name ) =
+                    input
+            in
+            button [ class inputContainer, onClick (Input input) ]
+                [ div [ class inputTrigger ] [ text <| String.fromChar trigger ]
+                , div [ class inputLabel ] [ text name ]
+                ]
+
+        renderFinish : Html Msg
+        renderFinish =
+            button [ class inputContainer, onClick Finish ]
+                [ div [ class inputTrigger ] [ text "Enter" ]
+                , div [ class inputLabel ] [ text "Finish" ]
+                ]
+
+        renderMove : Html Msg
+        renderMove =
+            div [] [ text "Move goes here" ]
+
+        -- div [ class "w-96 h-48 " ]
+        --     [ div [ class "h-full w-full flex-col" ]
+        --         [ div [ class "w-96 h-40" ]
+        --             [ move.inputs
+        --                 |> List.map renderInput
+        --                 |> div [ class "flex space-x-2 flex-wrap" ]
+        --             ]
+        --         , div [ class "w-96 h-8" ] [ renderFinish ]
+        --         ]
+        --     ]
+        renderLiveInput : Input -> Html Msg
+        renderLiveInput ( _, label ) =
+            div [] [ text label ]
+
+        renderInputs : Html Msg
+        renderInputs =
+            div [] [ text "Inputs go here" ]
+
+        -- div [ class "flex-grow h-48 border border-gray-900" ]
+        --     [ div [ class "flex-col" ] (List.map renderLiveInput selection.liveInputs)
+        --     ]
+    in
+    div [ class "w-full h-full border-gray-500 border-4 bg-gray-400 flex items-center p-2 space-x-2" ]
+        [ renderPortrait
+        , renderPrompt
+        , renderMove
+        , renderInputs
+        ]
 
 
 view : EngineArgs -> Model -> Html Msg
