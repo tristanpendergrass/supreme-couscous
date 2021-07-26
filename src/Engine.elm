@@ -1,6 +1,6 @@
 port module Engine exposing (EngineArgEnemy, Instance, create)
 
-import Action exposing (Action, ActionType)
+import Action exposing (Action, ActionType, SelectedAction)
 import ActionTimer exposing (ActionTimer)
 import Ally exposing (Ally)
 import Animation exposing (Animation)
@@ -63,11 +63,8 @@ create engineArgs =
 -- MODEL
 
 
-type Selection
-    = KnightSelection (List String)
-    | ThiefSelection
-    | PriestSelection
-    | EnemySelection
+type alias ActionList =
+    SelectionList Action SelectedAction
 
 
 type alias Enemy =
@@ -83,7 +80,7 @@ type alias Game =
     , seed : Random.Seed
     , party : Party
     , enemy : Enemy
-    , actions : SelectionList Action.ActionType Action.ActionModel
+    , actions : ActionList
     , health : Meter
     }
 
@@ -111,9 +108,9 @@ init engineArgs _ =
             , spriteAnimation = Nothing
             }
 
-        initialActions : SelectionList Action Selection
+        initialActions : SelectionList Action SelectedAction
         initialActions =
-            SelectionList.create 5
+            SelectionList.create { length = 5, select = Action.select, unselect = Action.unselect }
     in
     ( GameInProgress
         { nonce = 0
@@ -143,17 +140,12 @@ type Msg
     | HandleAnimationFrame Float
 
 
-type KnightMsg
-    = Swing
-    | Stab
-
-
 updateParty : (Party -> Party) -> Game -> Game
 updateParty updateFn game =
     { game | party = updateFn game.party }
 
 
-updateActions : (SelectionList Action Selection -> SelectionList Action Selection) -> Game -> Game
+updateActions : (ActionList -> ActionList) -> Game -> Game
 updateActions fn game =
     { game | actions = fn game.actions }
 
@@ -254,7 +246,10 @@ applyOnSuccess : Action -> Game -> Game
 applyOnSuccess action game =
     let
         effects =
-            (Action.stats action.actionType).onSuccess
+            action
+                |> Action.getActionType
+                |> Action.getStats
+                |> .onSuccess
 
         applyEffect : Action.Effect -> Game -> Game
         applyEffect effect g =
@@ -318,23 +313,7 @@ updateGame engineArgs msg game =
             ContinueGame ( newGame, Cmd.none )
 
         SelectAction position ->
-            let
-                createSelectionData : Action -> Selection
-                createSelectionData { actionType } =
-                    case actionType of
-                        Action.KnightAttack ->
-                            KnightSelection []
-
-                        Action.ThiefAttack ->
-                            ThiefSelection
-
-                        Action.PriestAttack ->
-                            PriestSelection
-
-                        Action.EnemyAttack ->
-                            EnemySelection
-            in
-            SelectionList.select createSelectionData position game.actions
+            SelectionList.select position game.actions
                 |> Maybe.map
                     (\newActions ->
                         let
@@ -453,13 +432,9 @@ updateGame engineArgs msg game =
 
                 updateActionAnimation : Action -> Action
                 updateActionAnimation action =
-                    let
-                        newTimer =
-                            ActionTimer.handleAnimationFrame delta action.timer
-                    in
-                    { action | timer = newTimer }
+                    Action.mapTimer (ActionTimer.handleAnimationFrame delta)
 
-                updateActionsAnimation : SelectionList Action Selection -> SelectionList Action Selection
+                updateActionsAnimation : ActionList -> ActionList
                 updateActionsAnimation list =
                     list
                         |> SelectionList.mapUnselected updateActionAnimation
@@ -644,7 +619,7 @@ renderActionList game =
                 [ renderActionNumber index (SelectAction index)
                 , div [ class "relative h-full w-36" ]
                     [ div [ class actionContent, style "left" (String.fromFloat (ActionTimer.getLeft action.timer) ++ "%") ]
-                        [ img [ src (Action.stats action.actionType).avatarUrl ] [] ]
+                        [ img [ src (Action.getStats action.actionType).avatarUrl ] [] ]
                     ]
                 ]
 
@@ -654,7 +629,7 @@ renderActionList game =
                 [ renderActionNumber index DeselectAction
                 , div [ class "relative h-full w-36" ]
                     [ div [ class actionContent, class "border-dashed" ]
-                        [ img [ src (Action.stats action.actionType).avatarUrl ] [] ]
+                        [ img [ src (Action.getStats action.actionType).avatarUrl ] [] ]
                     ]
                 ]
 
@@ -770,7 +745,7 @@ renderKnightBottom : Action -> List String -> Html Msg
 renderKnightBottom action strings =
     let
         stats =
-            Action.stats action.actionType
+            Action.getStats action.actionType
 
         renderPortrait : Html Msg
         renderPortrait =

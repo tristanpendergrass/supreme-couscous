@@ -3,22 +3,21 @@ module Action exposing
     , ActionModel(..)
     , ActionType(..)
     , Effect(..)
+    , SelectedAction
     , create
     , damage
-    , getModel
+    , getActionType
+    , getStats
     , isExpired
-    , stats
+    , select
+    , unselect
     )
 
 import ActionTimer exposing (ActionTimer)
-import Html exposing (Html)
 
 
 type Action
     = Action ActionType Int ActionTimer
-
-type SelectedAction
-    = SelectedAction ActionType Int ActionTimer
 
 
 type ActionType
@@ -34,23 +33,30 @@ type ActionModel
     | PriestModel
     | EnemyModel
 
-getSelectedAction : Action -> SelectedAction
-getSelectedAction action =
 
-getModel : Action -> ActionModel
-getModel (Action actionType _ _) =
-    case actionType of
+select : Action -> SelectedAction
+select action =
+    let
+        commonData =
+            getCommonData action
+    in
+    case commonData.actionType of
         KnightAttack ->
-            KnightModel
+            SelectedAction commonData KnightModel
 
         ThiefAttack ->
-            ThiefModel
+            SelectedAction commonData ThiefModel
 
         PriestAttack ->
-            PriestModel
+            SelectedAction commonData PriestModel
 
         EnemyAttack ->
-            EnemyModel
+            SelectedAction commonData EnemyModel
+
+
+unselect : SelectedAction -> Action
+unselect (SelectedAction commonData actionModel) =
+    Action commonData
 
 
 type alias Stats =
@@ -76,32 +82,41 @@ create : Int -> ActionType -> Action
 create id actionType =
     case actionType of
         KnightAttack ->
-            { id = id
-            , timer = ActionTimer.create allyActionTimings
-            , actionType = KnightAttack
-            }
+            Action
+                { id = id
+                , timer = ActionTimer.create allyActionTimings
+                , actionType = KnightAttack
+                }
 
         ThiefAttack ->
-            { id = id
-            , timer = ActionTimer.create allyActionTimings
-            , actionType = ThiefAttack
-            }
+            Action
+                { id = id
+                , timer = ActionTimer.create allyActionTimings
+                , actionType = ThiefAttack
+                }
 
         PriestAttack ->
-            { id = id
-            , timer = ActionTimer.create allyActionTimings
-            , actionType = PriestAttack
-            }
+            Action
+                { id = id
+                , timer = ActionTimer.create allyActionTimings
+                , actionType = PriestAttack
+                }
 
         EnemyAttack ->
-            { id = id
-            , timer = ActionTimer.create allyActionTimings
-            , actionType = EnemyAttack
-            }
+            Action
+                { id = id
+                , timer = ActionTimer.create allyActionTimings
+                , actionType = EnemyAttack
+                }
 
 
-stats : ActionType -> Stats
-stats actionType =
+getActionType : Action -> ActionType
+getActionType (Action { actionType }) =
+    actionType
+
+
+getStats : ActionType -> Stats
+getStats actionType =
     case actionType of
         KnightAttack ->
             { avatarUrl = "knight_portrait.png"
@@ -130,7 +145,7 @@ stats actionType =
 
 isExpired : Action -> Bool
 isExpired =
-    .timer >> ActionTimer.isDone
+    getCommonData >> .timer >> ActionTimer.isDone
 
 
 damage : Int -> Effect
