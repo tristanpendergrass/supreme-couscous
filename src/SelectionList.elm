@@ -20,29 +20,22 @@ import Selection exposing (Selection)
 
 
 type SelectionList t d
-    = HasSelection (Props t d) (List (Maybe t)) d (List (Maybe t))
-    | NoSelection (Props t d) (List (Maybe t))
+    = HasSelection Int (List (Maybe t)) ( t, d ) (List (Maybe t))
+    | NoSelection Int (List (Maybe t))
 
 
-type alias Props t d =
-    { length : Int
-    , select : t -> d
-    , unselect : d -> t
-    }
-
-
-create : Props t d -> SelectionList t d
-create props =
-    NoSelection props (List.repeat props.length Nothing)
+create : Int -> SelectionList t d
+create length =
+    NoSelection length (List.repeat length Nothing)
 
 
 getLength : SelectionList t d -> Int
 getLength selectionList =
     case selectionList of
-        HasSelection { length } _ _ _ ->
+        HasSelection length _ _ _ ->
             length
 
-        NoSelection { length } _ ->
+        NoSelection length _ ->
             length
 
 
@@ -52,42 +45,32 @@ clearSelection list =
         NoSelection _ _ ->
             list
 
-        HasSelection props first el second ->
-            NoSelection props (List.concat [ first, [ Just <| props.unselect el ], second ])
+        HasSelection length first ( el, _ ) second ->
+            NoSelection length (List.concat [ first, [ Just el ], second ])
 
 
-getProps : SelectionList t d -> Props t d
-getProps selectionList =
-    case selectionList of
-        HasSelection props _ _ _ ->
-            props
-
-        NoSelection props _ ->
-            props
-
-
-select : Int -> SelectionList t d -> Maybe (SelectionList t d)
-select index selectionList =
+select : Int -> (t -> d) -> SelectionList t d -> Maybe (SelectionList t d)
+select index getData selectionList =
     let
-        props =
-            getProps selectionList
+        length =
+            getLength selectionList
 
         list =
             case selectionList of
                 NoSelection _ list_ ->
                     list_
 
-                HasSelection _ first el second ->
-                    List.concat [ first, [ Just <| props.unselect el ], second ]
+                HasSelection _ first ( el, _ ) second ->
+                    List.concat [ first, [ Just el ], second ]
 
         newFirst =
             List.take index list
 
-        maybeEl : Maybe d
+        maybeEl : Maybe ( t, d )
         maybeEl =
             case List.Extra.getAt index list of
                 Just (Just el) ->
-                    Just (props.select el)
+                    Just ( el, getData el )
 
                 _ ->
                     Nothing
@@ -99,7 +82,7 @@ select index selectionList =
         maybeEl
             |> Maybe.map
                 (\newSelection ->
-                    HasSelection props newFirst newSelection newSecond
+                    HasSelection length newFirst newSelection newSecond
                 )
 
     else
@@ -112,11 +95,11 @@ mapSelection fn selectionList =
         NoSelection _ _ ->
             Nothing
 
-        HasSelection length first el second ->
-            Just <| HasSelection length first (fn el) second
+        HasSelection length first ( el, data ) second ->
+            Just <| HasSelection length first ( el, fn data ) second
 
 
-getSelected : SelectionList t d -> Maybe d
+getSelected : SelectionList t d -> Maybe ( t, d )
 getSelected selectionList =
     case selectionList of
         NoSelection _ _ ->
@@ -126,7 +109,7 @@ getSelected selectionList =
             Just selection
 
 
-indexedMap : (Int -> t -> a) -> (Int -> d -> a) -> (Int -> a) -> SelectionList t d -> List a
+indexedMap : (Int -> t -> a) -> (Int -> ( t, d ) -> a) -> (Int -> a) -> SelectionList t d -> List a
 indexedMap mapEl mapSelectedEl mapNull selectionList =
     let
         mapMaybeEl : Int -> Maybe t -> a

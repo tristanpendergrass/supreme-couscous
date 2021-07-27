@@ -3,21 +3,28 @@ module Action exposing
     , ActionModel(..)
     , ActionType(..)
     , Effect(..)
-    , SelectedAction
     , create
     , damage
     , getActionType
+    , getModel
     , getStats
+    , getTimer
     , isExpired
-    , select
-    , unselect
+    , mapTimer
     )
 
 import ActionTimer exposing (ActionTimer)
 
 
+type alias CommonData =
+    { actionType : ActionType
+    , id : Int
+    , timer : ActionTimer
+    }
+
+
 type Action
-    = Action ActionType Int ActionTimer
+    = Action CommonData
 
 
 type ActionType
@@ -34,29 +41,25 @@ type ActionModel
     | EnemyModel
 
 
-select : Action -> SelectedAction
-select action =
-    let
-        commonData =
-            getCommonData action
-    in
-    case commonData.actionType of
+getModel : Action -> ActionModel
+getModel (Action { actionType }) =
+    case actionType of
         KnightAttack ->
-            SelectedAction commonData KnightModel
+            KnightModel
 
         ThiefAttack ->
-            SelectedAction commonData ThiefModel
+            ThiefModel
 
         PriestAttack ->
-            SelectedAction commonData PriestModel
+            PriestModel
 
         EnemyAttack ->
-            SelectedAction commonData EnemyModel
+            EnemyModel
 
 
-unselect : SelectedAction -> Action
-unselect (SelectedAction commonData actionModel) =
-    Action commonData
+getCommonData : Action -> CommonData
+getCommonData (Action commonData) =
+    commonData
 
 
 type alias Stats =
@@ -70,16 +73,16 @@ type Effect
     = Damage Int
 
 
-allyActionTimings : ActionTimer.Timings
-allyActionTimings =
-    { slideOutTime = 500
-    , stayTime = 2000
-    , slideInTime = 10000
-    }
-
-
 create : Int -> ActionType -> Action
 create id actionType =
+    let
+        allyActionTimings : ActionTimer.Timings
+        allyActionTimings =
+            { slideOutTime = 500
+            , stayTime = 2000
+            , slideInTime = 10000
+            }
+    in
     case actionType of
         KnightAttack ->
             Action
@@ -115,8 +118,13 @@ getActionType (Action { actionType }) =
     actionType
 
 
-getStats : ActionType -> Stats
-getStats actionType =
+getTimer : Action -> ActionTimer
+getTimer (Action { timer }) =
+    timer
+
+
+getStats : Action -> Stats
+getStats (Action { actionType }) =
     case actionType of
         KnightAttack ->
             { avatarUrl = "knight_portrait.png"
@@ -151,3 +159,14 @@ isExpired =
 damage : Int -> Effect
 damage =
     Damage
+
+
+mapTimer : (ActionTimer -> ActionTimer) -> Action -> Action
+mapTimer fn action =
+    case action of
+        Action data ->
+            let
+                oldTimer =
+                    data.timer
+            in
+            Action { data | timer = fn oldTimer }

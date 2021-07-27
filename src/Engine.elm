@@ -1,6 +1,6 @@
 port module Engine exposing (EngineArgEnemy, Instance, create)
 
-import Action exposing (Action, ActionType, SelectedAction)
+import Action exposing (Action, ActionModel, ActionType)
 import ActionTimer exposing (ActionTimer)
 import Ally exposing (Ally)
 import Animation exposing (Animation)
@@ -64,7 +64,7 @@ create engineArgs =
 
 
 type alias ActionList =
-    SelectionList Action SelectedAction
+    SelectionList Action ActionModel
 
 
 type alias Enemy =
@@ -108,9 +108,9 @@ init engineArgs _ =
             , spriteAnimation = Nothing
             }
 
-        initialActions : SelectionList Action SelectedAction
+        initialActions : ActionList
         initialActions =
-            SelectionList.create { length = 5, select = Action.select, unselect = Action.unselect }
+            SelectionList.create 5
     in
     ( GameInProgress
         { nonce = 0
@@ -247,7 +247,6 @@ applyOnSuccess action game =
     let
         effects =
             action
-                |> Action.getActionType
                 |> Action.getStats
                 |> .onSuccess
 
@@ -313,7 +312,7 @@ updateGame engineArgs msg game =
             ContinueGame ( newGame, Cmd.none )
 
         SelectAction position ->
-            SelectionList.select position game.actions
+            SelectionList.select position Action.getModel game.actions
                 |> Maybe.map
                     (\newActions ->
                         let
@@ -431,7 +430,7 @@ updateGame engineArgs msg game =
                             |> updateEnemy (updateEnemyEnergy delta)
 
                 updateActionAnimation : Action -> Action
-                updateActionAnimation action =
+                updateActionAnimation =
                     Action.mapTimer (ActionTimer.handleAnimationFrame delta)
 
                 updateActionsAnimation : ActionList -> ActionList
@@ -615,21 +614,27 @@ renderActionList game =
 
         renderUnselectedAction : Int -> Action -> Html Msg
         renderUnselectedAction index action =
+            let
+                timeLeft =
+                    action
+                        |> Action.getTimer
+                        |> ActionTimer.getLeft
+            in
             div [ class actionContainer, onClick (SelectAction index) ]
                 [ renderActionNumber index (SelectAction index)
                 , div [ class "relative h-full w-36" ]
-                    [ div [ class actionContent, style "left" (String.fromFloat (ActionTimer.getLeft action.timer) ++ "%") ]
-                        [ img [ src (Action.getStats action.actionType).avatarUrl ] [] ]
+                    [ div [ class actionContent, style "left" (String.fromFloat timeLeft ++ "%") ]
+                        [ img [ src (Action.getStats action).avatarUrl ] [] ]
                     ]
                 ]
 
-        renderSelectedAction : Int -> ( Action, Selection ) -> Html Msg
-        renderSelectedAction index ( action, selection ) =
+        renderSelectedAction : Int -> ( Action, ActionModel ) -> Html Msg
+        renderSelectedAction index ( action, actionModel ) =
             div [ class actionContainer, onClick DeselectAction ]
                 [ renderActionNumber index DeselectAction
                 , div [ class "relative h-full w-36" ]
                     [ div [ class actionContent, class "border-dashed" ]
-                        [ img [ src (Action.getStats action.actionType).avatarUrl ] [] ]
+                        [ img [ src (Action.getStats action).avatarUrl ] [] ]
                     ]
                 ]
 
@@ -724,19 +729,28 @@ renderBottom : Game -> Html Msg
 renderBottom game =
     SelectionList.getSelected game.actions
         |> Maybe.map
-            (\( action, selection ) ->
-                case selection of
-                    KnightSelection strings ->
-                        renderKnightBottom action strings
+            (\( action, actionModel ) ->
+                case ( Action.getActionType action, actionModel ) of
+                    ( Action.KnightAttack, Action.KnightModel ) ->
+                        renderKnightBottom action []
 
-                    ThiefSelection ->
-                        div [ class "text-gray-100" ] [ text "Thief Selection" ]
+                    ( Action.ThiefAttack, Action.ThiefModel ) ->
+                        div [] []
 
-                    PriestSelection ->
-                        div [ class "text-gray-100" ] [ text "Priest Selection" ]
+                    ( Action.PriestAttack, Action.PriestModel ) ->
+                        div [] []
 
-                    EnemySelection ->
-                        div [ class "text-gray-100" ] [ text "Enemy Selection" ]
+                    ( Action.EnemyAttack, Action.EnemyModel ) ->
+                        div [] []
+
+                    _ ->
+                        div [] []
+             -- ThiefSelection ->
+             --     div [ class "text-gray-100" ] [ text "Thief Selection" ]
+             -- PriestSelection ->
+             --     div [ class "text-gray-100" ] [ text "Priest Selection" ]
+             -- EnemySelection ->
+             --     div [ class "text-gray-100" ] [ text "Enemy Selection" ]
             )
         |> Maybe.withDefault (div [ class "text-gray-100" ] [ text "Nothing Selected" ])
 
@@ -745,7 +759,7 @@ renderKnightBottom : Action -> List String -> Html Msg
 renderKnightBottom action strings =
     let
         stats =
-            Action.getStats action.actionType
+            Action.getStats action
 
         renderPortrait : Html Msg
         renderPortrait =
