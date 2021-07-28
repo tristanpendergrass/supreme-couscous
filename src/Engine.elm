@@ -769,8 +769,8 @@ renderKnightBottom action strings =
 
         renderPrompt : Html Msg
         renderPrompt =
-            div [ class "w-64 h-48" ]
-                [ div [ class "italic" ] [ text "Knight move" ]
+            div [ class "h-12 flex items-center justify-center" ]
+                [ div [ class "italic" ] [ text "For this opponent...something special. A kick, a slash, then wait, then stab!" ]
                 ]
 
         renderInput : Input -> Html Msg
@@ -819,9 +819,8 @@ renderKnightBottom action strings =
     in
     div [ class "w-full h-full border-gray-500 border-4 bg-gray-400 flex items-center p-2 space-x-2" ]
         [ renderPortrait
-        , renderPrompt
-        , renderMove
-        , renderInputs
+        , div [ class "flex-grow flex flex-col space-y-2 items-stretch justify-start h-full" ]
+            [ renderPrompt, renderMove, renderInputs ]
         ]
 
 
