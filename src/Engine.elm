@@ -791,20 +791,16 @@ renderKnightBottom action strings =
                 , div [ class inputLabel ] [ text "Finish" ]
                 ]
 
-        renderMove : Html Msg
-        renderMove =
-            div [] [ text "Move goes here" ]
+        renderMoves : Html Msg
+        renderMoves =
+            div [ class "h-24 " ]
+                [ div [ class "w-96 h-40" ]
+                    [ [ ( 'S', "Slash" ), ( 'K', "Kick" ), ( 'W', "Wait" ), ( 'T', "Thrust" ) ]
+                        |> List.map renderInput
+                        |> div [ class "flex space-x-2 flex-wrap" ]
+                    ]
+                ]
 
-        -- div [ class "w-96 h-48 " ]
-        --     [ div [ class "h-full w-full flex-col" ]
-        --         [ div [ class "w-96 h-40" ]
-        --             [ move.inputs
-        --                 |> List.map renderInput
-        --                 |> div [ class "flex space-x-2 flex-wrap" ]
-        --             ]
-        --         , div [ class "w-96 h-8" ] [ renderFinish ]
-        --         ]
-        --     ]
         renderLiveInput : Input -> Html Msg
         renderLiveInput ( _, label ) =
             div [] [ text label ]
@@ -820,7 +816,7 @@ renderKnightBottom action strings =
     div [ class "w-full h-full border-gray-500 border-4 bg-gray-400 flex items-center p-2 space-x-2" ]
         [ renderPortrait
         , div [ class "flex-grow flex flex-col space-y-2 items-stretch justify-start h-full" ]
-            [ renderPrompt, renderMove, renderInputs ]
+            [ renderPrompt, renderMoves, renderInputs ]
         ]
 
 
