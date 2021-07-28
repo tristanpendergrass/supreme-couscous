@@ -83,34 +83,11 @@ create id actionType =
             , slideInTime = 10000
             }
     in
-    case actionType of
-        KnightAttack ->
-            Action
-                { id = id
-                , timer = ActionTimer.create allyActionTimings
-                , actionType = KnightAttack
-                }
-
-        ThiefAttack ->
-            Action
-                { id = id
-                , timer = ActionTimer.create allyActionTimings
-                , actionType = ThiefAttack
-                }
-
-        PriestAttack ->
-            Action
-                { id = id
-                , timer = ActionTimer.create allyActionTimings
-                , actionType = PriestAttack
-                }
-
-        EnemyAttack ->
-            Action
-                { id = id
-                , timer = ActionTimer.create allyActionTimings
-                , actionType = EnemyAttack
-                }
+    Action
+        { id = id
+        , timer = ActionTimer.create allyActionTimings
+        , actionType = actionType
+        }
 
 
 getActionType : Action -> ActionType
@@ -127,10 +104,7 @@ getStats : Action -> Stats
 getStats (Action { actionType }) =
     case actionType of
         KnightAttack ->
-            { avatarUrl = "knight_portrait.png"
-            , maxEnergy = 100
-            , onSuccess = [ damage 10 ]
-            }
+            knightAttackStats
 
         ThiefAttack ->
             { avatarUrl = "thief_portrait.png"
@@ -170,3 +144,15 @@ mapTimer fn action =
                     data.timer
             in
             Action { data | timer = fn oldTimer }
+
+
+
+-- Knight stuff
+
+
+knightAttackStats : Stats
+knightAttackStats =
+    { avatarUrl = "knight_portrait.png"
+    , maxEnergy = 100
+    , onSuccess = [ damage 10 ]
+    }
