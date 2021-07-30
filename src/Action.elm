@@ -3,6 +3,7 @@ module Action exposing
     , ActionModel(..)
     , ActionType(..)
     , Effect(..)
+    , KnightInput(..)
     , create
     , damage
     , getActionType
@@ -10,6 +11,7 @@ module Action exposing
     , getStats
     , getTimer
     , isExpired
+    , knightInputStats
     , mapTimer
     )
 
@@ -35,7 +37,7 @@ type ActionType
 
 
 type ActionModel
-    = KnightModel
+    = KnightModel (List KnightInput)
     | ThiefModel
     | PriestModel
     | EnemyModel
@@ -45,7 +47,7 @@ getModel : Action -> ActionModel
 getModel (Action { actionType }) =
     case actionType of
         KnightAttack ->
-            KnightModel
+            KnightModel []
 
         ThiefAttack ->
             ThiefModel
@@ -156,3 +158,26 @@ knightAttackStats =
     , maxEnergy = 100
     , onSuccess = [ damage 10 ]
     }
+
+
+type KnightInput
+    = Slash
+    | Kick
+    | Wait
+    | Thrust
+
+
+knightInputStats : KnightInput -> { keyCode : Char, label : String }
+knightInputStats knightInput =
+    case knightInput of
+        Slash ->
+            { keyCode = 'S', label = "Slash" }
+
+        Kick ->
+            { keyCode = 'K', label = "Kick" }
+
+        Wait ->
+            { keyCode = 'W', label = "Wait" }
+
+        Thrust ->
+            { keyCode = 'T', label = "Thrust" }

@@ -136,6 +136,7 @@ type Msg
     | SelectAction Int
     | DeselectAction
     | Input Input
+    | HandleKnightInput Action.KnightInput
     | Finish
     | HandleAnimationFrame Float
 
@@ -356,6 +357,9 @@ updateGame engineArgs msg game =
             --         )
             --     |> Maybe.withDefault noOp
             Debug.todo "implement input"
+
+        HandleKnightInput input ->
+            noOp
 
         Finish ->
             -- case SelectionList.getSelected game.actions of
@@ -731,8 +735,8 @@ renderBottom game =
         |> Maybe.map
             (\( action, actionModel ) ->
                 case ( Action.getActionType action, actionModel ) of
-                    ( Action.KnightAttack, Action.KnightModel ) ->
-                        renderKnightBottom action []
+                    ( Action.KnightAttack, Action.KnightModel inputs ) ->
+                        renderKnightBottom action inputs
 
                     ( Action.ThiefAttack, Action.ThiefModel ) ->
                         div [] []
@@ -755,8 +759,8 @@ renderBottom game =
         |> Maybe.withDefault (div [ class "text-gray-100" ] [ text "Nothing Selected" ])
 
 
-renderKnightBottom : Action -> List String -> Html Msg
-renderKnightBottom action strings =
+renderKnightBottom : Action -> List Action.KnightInput -> Html Msg
+renderKnightBottom action knightModel =
     let
         stats =
             Action.getStats action
@@ -770,48 +774,34 @@ renderKnightBottom action strings =
         renderPrompt : Html Msg
         renderPrompt =
             div [ class "h-12 flex items-center justify-center" ]
-                [ div [ class "italic" ] [ text "For this opponent...something special. A kick, a slash, then wait, then stab!" ]
+                [ div [ class "italic" ] [ text "For this opponent...something special. A kick, a slash, then wait, then thrust!" ]
                 ]
 
-        renderInput : Input -> Html Msg
+        renderInput : Action.KnightInput -> Html Msg
         renderInput input =
             let
-                ( trigger, name ) =
-                    input
+                { keyCode, label } =
+                    Action.knightInputStats input
             in
-            button [ class inputContainer, onClick (Input input) ]
-                [ div [ class inputTrigger ] [ text <| String.fromChar trigger ]
-                , div [ class inputLabel ] [ text name ]
-                ]
-
-        renderFinish : Html Msg
-        renderFinish =
-            button [ class inputContainer, onClick Finish ]
-                [ div [ class inputTrigger ] [ text "Enter" ]
-                , div [ class inputLabel ] [ text "Finish" ]
+            button [ class inputContainer, onClick (HandleKnightInput input) ]
+                [ div [ class inputTrigger ] [ text <| String.fromChar keyCode ]
+                , div [ class inputLabel ] [ text label ]
                 ]
 
         renderMoves : Html Msg
         renderMoves =
             div [ class "h-24 " ]
                 [ div [ class "w-96 h-40" ]
-                    [ [ ( 'S', "Slash" ), ( 'K', "Kick" ), ( 'W', "Wait" ), ( 'T', "Thrust" ) ]
+                    -- [ [ ( 'S', "Slash" ), ( 'K', "Kick" ), ( 'W', "Wait" ), ( 'T', "Thrust" ) ]
+                    [ [ Action.Slash, Action.Kick, Action.Wait, Action.Thrust ]
                         |> List.map renderInput
                         |> div [ class "flex space-x-2 flex-wrap" ]
                     ]
                 ]
 
-        renderLiveInput : Input -> Html Msg
-        renderLiveInput ( _, label ) =
-            div [] [ text label ]
-
         renderInputs : Html Msg
         renderInputs =
             div [] [ text "Inputs go here" ]
-
-        -- div [ class "flex-grow h-48 border border-gray-900" ]
-        --     [ div [ class "flex-col" ] (List.map renderLiveInput selection.liveInputs)
-        --     ]
     in
     div [ class "w-full h-full border-gray-500 border-4 bg-gray-400 flex items-center p-2 space-x-2" ]
         [ renderPortrait
