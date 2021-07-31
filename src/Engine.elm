@@ -294,6 +294,26 @@ isGameWon game =
     Meter.getCurrent game.enemy.health == 0
 
 
+mapKnightModel : (List Action.KnightInput -> List Action.KnightInput) -> Game -> Game
+mapKnightModel fn game =
+    let
+        newActions : ActionList
+        newActions =
+            game.actions
+                |> SelectionList.mapSelection
+                    (\actionModel ->
+                        case actionModel of
+                            Action.KnightModel list ->
+                                Action.KnightModel (fn list)
+
+                            _ ->
+                                actionModel
+                    )
+                |> Maybe.withDefault game.actions
+    in
+    { game | actions = newActions }
+
+
 updateGame : EngineArgs -> Msg -> Game -> GameUpdate
 updateGame engineArgs msg game =
     let
@@ -359,7 +379,13 @@ updateGame engineArgs msg game =
             Debug.todo "implement input"
 
         HandleKnightInput input ->
-            noOp
+            let
+                newGame : Game
+                newGame =
+                    game
+                        |> mapKnightModel (Action.handleKnightInput input)
+            in
+            ContinueGame ( newGame, Cmd.none )
 
         Finish ->
             -- case SelectionList.getSelected game.actions of
@@ -801,7 +827,10 @@ renderKnightBottom action knightModel =
 
         renderInputs : Html Msg
         renderInputs =
-            div [] [ text "Inputs go here" ]
+            div [ class "flex space-x-2" ]
+                (knightModel
+                    |> List.map renderInput
+                )
     in
     div [ class "w-full h-full border-gray-500 border-4 bg-gray-400 flex items-center p-2 space-x-2" ]
         [ renderPortrait

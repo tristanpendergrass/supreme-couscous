@@ -10,6 +10,7 @@ module Action exposing
     , getModel
     , getStats
     , getTimer
+    , handleKnightInput
     , isExpired
     , knightInputStats
     , mapTimer
@@ -181,3 +182,8 @@ knightInputStats knightInput =
 
         Thrust ->
             { keyCode = 'T', label = "Thrust" }
+
+
+handleKnightInput : KnightInput -> List KnightInput -> List KnightInput
+handleKnightInput =
+    (::)
