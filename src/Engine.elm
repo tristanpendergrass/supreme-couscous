@@ -518,16 +518,6 @@ tryAll things =
                     tryAll rest
 
 
-getAvailableInputs : Game -> List Input
-getAvailableInputs game =
-    SelectionList.getSelected game.actions
-        |> Maybe.map
-            (\( action, _ ) ->
-                Debug.todo "Implement getAvailableInputs"
-            )
-        |> Maybe.withDefault []
-
-
 toUserInput : EngineArgs -> Game -> String -> Msg
 toUserInput engineArgs game string =
     let
@@ -585,9 +575,17 @@ matchGlobalAction string =
 
 matchSelectionAction : Game -> String -> Maybe Msg
 matchSelectionAction game string =
-    game
-        |> getAvailableInputs
-        |> findInputMatchingString string
+    SelectionList.getSelected game.actions
+        |> Maybe.andThen
+            (\selection ->
+                case selection of
+                    ( _, Action.KnightModel _ ) ->
+                        Action.toKnightInput string
+                            |> Maybe.map HandleKnightInput
+
+                    _ ->
+                        Nothing
+            )
 
 
 subscriptions : EngineArgs -> Model -> Sub Msg

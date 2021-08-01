@@ -14,6 +14,7 @@ module Action exposing
     , isExpired
     , knightInputStats
     , mapTimer
+    , toKnightInput
     )
 
 import ActionTimer exposing (ActionTimer)
@@ -187,3 +188,22 @@ knightInputStats knightInput =
 handleKnightInput : KnightInput -> List KnightInput -> List KnightInput
 handleKnightInput =
     (::)
+
+
+toKnightInput : String -> Maybe KnightInput
+toKnightInput string =
+    case string of
+        "s" ->
+            Just Slash
+
+        "w" ->
+            Just Wait
+
+        "k" ->
+            Just Kick
+
+        "t" ->
+            Just Thrust
+
+        _ ->
+            Nothing
