@@ -388,34 +388,35 @@ updateGame engineArgs msg game =
             ContinueGame ( newGame, Cmd.none )
 
         Finish ->
-            -- case SelectionList.getSelected game.actions of
-            --     Nothing ->
-            --         -- Finishing when nothing is selected shouldn't normally happen
-            --         noOp
-            --     Just ( action, selection ) ->
-            --         case action of
-            --             EnemyMove _ ->
-            --                 Debug.todo "Implement enemy move"
-            --             AllyMove _ _ move ->
-            --                 if Utils.isPatternComplete move.recipe (List.reverse selection.liveInputs) then
-            --                     let
-            --                         newGame =
-            --                             game
-            --                                 |> applyOnSuccess move
-            --                                 |> updateActions SelectionList.deleteSelected
-            --                                 |> updateEnemy (\enemy -> { enemy | spriteAnimation = Just <| Animation.create Animation.Shake })
-            --                     in
-            --                     ContinueGame ( newGame, emitSound sounds.attack )
-            --                 else
-            --                     -- Finish was called without a completed pattern for a selected ally
-            --                     let
-            --                         newGame =
-            --                             game
-            --                                 |> updateActions SelectionList.deleteSelected
-            --                     in
-            --                     ContinueGame ( newGame, emitSound sounds.select )
-            Debug.todo "Implement Finish"
+            case SelectionList.getSelected game.actions of
+                Nothing ->
+                    -- Finishing when nothing is selected shouldn't normally happen
+                    noOp
 
+                Just ( _, Action.KnightModel inputs ) ->
+                    noOp
+
+                _ ->
+                    Debug.todo "Implement other moves"
+
+        -- AllyMove _ _ move ->
+        --     if Utils.isPatternComplete move.recipe (List.reverse selection.liveInputs) then
+        --         let
+        --             newGame =
+        --                 game
+        --                     |> applyOnSuccess move
+        --                     |> updateActions SelectionList.deleteSelected
+        --                     |> updateEnemy (\enemy -> { enemy | spriteAnimation = Just <| Animation.create Animation.Shake })
+        --         in
+        --         ContinueGame ( newGame, emitSound sounds.attack )
+        --     else
+        --         -- Finish was called without a completed pattern for a selected ally
+        --         let
+        --             newGame =
+        --                 game
+        --                     |> updateActions SelectionList.deleteSelected
+        --         in
+        --         ContinueGame ( newGame, emitSound sounds.select )
         HandleAnimationFrame delta ->
             let
                 updateAnimation : { a | spriteAnimation : Maybe Animation } -> { a | spriteAnimation : Maybe Animation }
@@ -812,16 +813,19 @@ renderKnightBottom action knightModel =
                 , div [ class inputLabel ] [ text label ]
                 ]
 
+        renderFinishButton : Html Msg
+        renderFinishButton =
+            div [ onClick Finish ] [ text "Finish" ]
+
         renderMoves : Html Msg
         renderMoves =
-            div [ class "h-24 " ]
-                [ div [ class "w-96 h-40" ]
-                    -- [ [ ( 'S', "Slash" ), ( 'K', "Kick" ), ( 'W', "Wait" ), ( 'T', "Thrust" ) ]
+            div [ class "w-96 h-40 flex" ]
+                (List.concat
                     [ [ Action.Slash, Action.Kick, Action.Wait, Action.Thrust ]
                         |> List.map renderInput
-                        |> div [ class "flex space-x-2 flex-wrap" ]
+                    , [ renderFinishButton ]
                     ]
-                ]
+                )
 
         renderInputs : Html Msg
         renderInputs =
