@@ -393,8 +393,24 @@ updateGame engineArgs msg game =
                     -- Finishing when nothing is selected shouldn't normally happen
                     noOp
 
-                Just ( _, Action.KnightModel inputs ) ->
-                    noOp
+                Just ( action, Action.KnightModel inputs ) ->
+                    let
+                        effects =
+                            Action.getStats action
+                                |> .onSuccess
+
+                        applyEffect : Action.Effect -> Game -> Game
+                        applyEffect effect g =
+                            case effect of
+                                Action.Damage amount ->
+                                    dealDamageToEnemy amount g
+
+                        newGame : Game
+                        newGame =
+                            List.foldl applyEffect game effects
+                                |> updateActions SelectionList.deleteSelected
+                    in
+                    ContinueGame ( newGame, emitSound sounds.select )
 
                 _ ->
                     Debug.todo "Implement other moves"
