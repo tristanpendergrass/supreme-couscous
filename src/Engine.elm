@@ -314,6 +314,11 @@ mapKnightModel fn game =
     { game | actions = newActions }
 
 
+addShake : { a | spriteAnimation : Maybe Animation } -> { a | spriteAnimation : Maybe Animation }
+addShake obj =
+    { obj | spriteAnimation = Just <| Animation.create Animation.Shake }
+
+
 updateGame : EngineArgs -> Msg -> Game -> GameUpdate
 updateGame engineArgs msg game =
     let
@@ -471,6 +476,7 @@ updateGame engineArgs msg game =
                             |> updateHealth (Meter.subtract (toFloat enemy.stats.damage))
                             |> updateEnemy drainEnergy
                             |> updateEnemy (updateEnemyEnergy delta)
+                            |> updateEnemy addShake
 
                     else
                         oldGame
