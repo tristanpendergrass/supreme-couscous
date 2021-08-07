@@ -670,22 +670,29 @@ renderActionList game =
                     action
                         |> Action.getTimer
                         |> ActionTimer.getLeft
+
+                { avatarUrl, bgColor } =
+                    Action.getStats action
             in
             div [ class actionContainer, onClick (SelectAction index) ]
                 [ renderActionNumber index (SelectAction index)
                 , div [ class "relative h-full w-36" ]
-                    [ div [ class actionContent, style "left" (String.fromFloat timeLeft ++ "%") ]
-                        [ img [ src (Action.getStats action).avatarUrl ] [] ]
+                    [ div [ class actionContent, class bgColor, style "left" (String.fromFloat timeLeft ++ "%") ]
+                        [ img [ src avatarUrl ] [] ]
                     ]
                 ]
 
         renderSelectedAction : Int -> ( Action, ActionModel ) -> Html Msg
         renderSelectedAction index ( action, actionModel ) =
+            let
+                { avatarUrl, bgColor } =
+                    Action.getStats action
+            in
             div [ class actionContainer, onClick DeselectAction ]
                 [ renderActionNumber index DeselectAction
                 , div [ class "relative h-full w-36" ]
-                    [ div [ class actionContent, class "border-dashed" ]
-                        [ img [ src (Action.getStats action).avatarUrl ] [] ]
+                    [ div [ class actionContent, class bgColor, class "border-dashed" ]
+                        [ img [ src avatarUrl ] [] ]
                     ]
                 ]
 
@@ -815,7 +822,7 @@ renderKnightBottom action knightModel =
         renderPortrait : Html Msg
         renderPortrait =
             div [ class "overflow-hidden w-48 h-48 relative" ]
-                [ div [ class "bg-blue-200 border-4 border-gray-900" ] [ img [ src stats.avatarUrl, class "bg-blue-200" ] [] ]
+                [ div [ class "border-4 border-gray-900" ] [ img [ src stats.avatarUrl, class stats.bgColor ] [] ]
                 ]
 
         renderPrompt : Html Msg

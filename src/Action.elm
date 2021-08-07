@@ -70,6 +70,7 @@ type alias Stats =
     { avatarUrl : String
     , maxEnergy : Int
     , onSuccess : List Effect
+    , bgColor : String
     }
 
 
@@ -114,18 +115,21 @@ getStats (Action { actionType }) =
             { avatarUrl = "thief_portrait.png"
             , maxEnergy = 100
             , onSuccess = [ damage 10 ]
+            , bgColor = "bg-yellow-800"
             }
 
         PriestAttack ->
             { avatarUrl = "priest_portrait.png"
             , maxEnergy = 100
             , onSuccess = [ damage 10 ]
+            , bgColor = "bg-yellow-100"
             }
 
         EnemyAttack ->
             { avatarUrl = "red_boy.png"
             , maxEnergy = 100
             , onSuccess = [ damage 10 ]
+            , bgColor = "bg-red-300"
             }
 
 
@@ -159,6 +163,7 @@ knightAttackStats =
     { avatarUrl = "knight_portrait.png"
     , maxEnergy = 100
     , onSuccess = [ damage 10 ]
+    , bgColor = "bg-blue-500"
     }
 
 
