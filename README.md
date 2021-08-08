@@ -18,12 +18,16 @@ $ npm run build
 
 # Roadmap
 
-Visual enhancements:
+## Knight Action
 
-- 144px x 40px border for action. Also need animated version for selected action.
-- Visuals for morale
+[ ] Add style on key down
+[ ] Add checkmark/"X" icon to correct/incorrect moves
+[ ] Animate moves, sliding in from right
+[ ] Design visual flair for outcome
+[ ] Add Fail/Fair/Good/Perfect grading to move outcome
+[ ] Add visual flair to outcome
 
-Gameplay:
+## Thief Action
 
-[ ] Track morale (just show a number in middle, decrement it over time)
-[ ] Enemies attack which reduce morale if slide off action
+[ ] Design
+[ ] Code
