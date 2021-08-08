@@ -630,17 +630,22 @@ subscriptions engineArgs model =
 
 inputContainer : String
 inputContainer =
-    "flex items-center h-8 border-2 border-gray-900 cursor-pointer"
+    "flex items-center h-8 overflow-hidden border-2 border-gray-900 cursor-pointer shadow"
 
 
 inputTrigger : String
 inputTrigger =
-    "py-1 px-2 bg-gray-900 text-gray-100"
+    "py-1 px-2 bg-gray-900 text-gray-100 active"
 
 
 inputLabel : String
 inputLabel =
-    "py-1 px-2"
+    "py-1 px-2 bg-blue-500 active:bg-blue-300"
+
+
+inputLabelActive : String
+inputLabelActive =
+    "py-1 px-2 bg-blue-300"
 
 
 renderActionList : Game -> Html Msg
@@ -831,15 +836,26 @@ renderKnightBottom action knightModel =
                 [ div [ class "italic" ] [ text "For this opponent...something special. A kick, a slash, then wait, then thrust!" ]
                 ]
 
-        renderInput : Action.KnightInput -> Html Msg
-        renderInput input =
+        renderInput : Bool -> Action.KnightInput -> Html Msg
+        renderInput isPressed input =
             let
                 { keyCode, label } =
                     Action.knightInputStats input
             in
-            button [ class inputContainer, onClick (HandleKnightInput input) ]
+            button
+                [ class inputContainer
+                , onClick (HandleKnightInput input)
+                ]
                 [ div [ class inputTrigger ] [ text <| String.fromChar keyCode ]
-                , div [ class inputLabel ] [ text label ]
+                , div
+                    [ class <|
+                        if isPressed then
+                            inputLabelActive
+
+                        else
+                            inputLabel
+                    ]
+                    [ text label ]
                 ]
 
         renderFinishButton : Html Msg
@@ -848,10 +864,10 @@ renderKnightBottom action knightModel =
 
         renderMoves : Html Msg
         renderMoves =
-            div [ class "w-96 h-40 flex" ]
+            div [ class "w-96 h-20 flex items-center space-x-1" ]
                 (List.concat
                     [ [ Action.Slash, Action.Kick, Action.Wait, Action.Thrust ]
-                        |> List.map renderInput
+                        |> List.map (renderInput True)
                     , [ renderFinishButton ]
                     ]
                 )
@@ -860,7 +876,7 @@ renderKnightBottom action knightModel =
         renderInputs =
             div [ class "flex space-x-2" ]
                 (knightModel
-                    |> List.map renderInput
+                    |> List.map (renderInput True)
                 )
     in
     div [ class "w-full h-full border-gray-500 border-4 bg-gray-400 flex items-center p-2 space-x-2" ]
