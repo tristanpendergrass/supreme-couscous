@@ -1,4 +1,4 @@
-module Input exposing (Input(..))
+module Input exposing (Input(..), matchStringToInput)
 
 
 type Input
@@ -16,28 +16,44 @@ type Input
     | Thrust
 
 
-type alias Shortcut =
-    -- (Keycode, Label)
-    ( String, String )
+matchStringToInput : String -> Maybe Input
+matchStringToInput string =
+    case string of
+        "1" ->
+            Just SelectOne
 
+        "2" ->
+            Just SelectTwo
 
-getShortcut : Input -> Shortcut
-getShortcut input =
-    case input of
-        SelectOne ->
-            ( "1", "1" )
+        "3" ->
+            Just SelectThree
 
-        SelectTwo ->
-            ( "2", "2" )
+        "4" ->
+            Just SelectFour
 
-        SelectThree ->
-            ( "3", "3" )
+        "5" ->
+            Just SelectFive
 
-        SelectFour ->
-            ( "4", "4" )
+        "Escape" ->
+            Just Cancel
 
-        SelectFive ->
-            ( "5", "5" )
+        "q" ->
+            Just Cancel
 
-        Cancel ->
-            ( "", "" )
+        "Enter" ->
+            Just Finish
+
+        "s" ->
+            Just Slash
+
+        "k" ->
+            Just Kick
+
+        "w" ->
+            Just Wait
+
+        "t" ->
+            Just Thrust
+
+        _ ->
+            Nothing

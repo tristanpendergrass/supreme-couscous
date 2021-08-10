@@ -9,6 +9,7 @@ import Browser.Events
 import Html exposing (Html, button, div, img, text)
 import Html.Attributes exposing (class, src, style)
 import Html.Events exposing (onClick)
+import Input exposing (Input)
 import Json.Decode as Decode
 import List.Extra
 import Meter exposing (Meter)
@@ -32,10 +33,6 @@ sounds =
 
 type alias Instance =
     Program () Model Msg
-
-
-type alias Input =
-    ( Char, String )
 
 
 type alias EngineArgEnemy =
@@ -543,72 +540,50 @@ tryAll things =
 
 toUserInput : EngineArgs -> Game -> String -> Msg
 toUserInput engineArgs game string =
-    let
-        result =
-            tryAll
-                [ matchGlobalAction string
-                , matchSelectionAction game string
-                ]
-    in
-    Maybe.withDefault NoOp result
+    Debug.log "string" string
+        |> Input.matchStringToInput
+        |> Maybe.andThen matchInputToMsg
+        |> Maybe.withDefault NoOp
 
 
-findInputMatchingString : String -> List Input -> Maybe Msg
-findInputMatchingString string inputs =
-    let
-        inputMatchesString : String -> Input -> Bool
-        inputMatchesString iterString ( trigger, _ ) =
-            iterString == String.fromChar trigger
-    in
-    inputs
-        |> List.Extra.find (inputMatchesString string)
-        |> Maybe.map Input
-
-
-matchGlobalAction : String -> Maybe Msg
-matchGlobalAction string =
-    case string of
-        "1" ->
+matchInputToMsg : Input -> Maybe Msg
+matchInputToMsg input =
+    -- As written matchInput is a bit dumb. It doesn't consider the context of the game when matching.
+    -- We might want to e.g. map Input.Cancel to Finish or CloseDialog if a dialog is open in the future.
+    -- That logic could live in this function.
+    case Debug.log "input" input of
+        Input.SelectOne ->
             Just (SelectAction 0)
 
-        "2" ->
+        Input.SelectTwo ->
             Just (SelectAction 1)
 
-        "3" ->
+        Input.SelectThree ->
             Just (SelectAction 2)
 
-        "4" ->
+        Input.SelectFour ->
             Just (SelectAction 3)
 
-        "5" ->
+        Input.SelectFive ->
             Just (SelectAction 4)
 
-        "Escape" ->
+        Input.Cancel ->
             Just DeselectAction
 
-        "q" ->
-            Just DeselectAction
-
-        "Enter" ->
+        Input.Finish ->
             Just Finish
 
-        _ ->
-            Nothing
+        Input.Slash ->
+            Just (HandleKnightInput Action.Slash)
 
+        Input.Kick ->
+            Just (HandleKnightInput Action.Kick)
 
-matchSelectionAction : Game -> String -> Maybe Msg
-matchSelectionAction game string =
-    SelectionList.getSelected game.actions
-        |> Maybe.andThen
-            (\selection ->
-                case selection of
-                    ( _, Action.KnightModel _ ) ->
-                        Action.toKnightInput string
-                            |> Maybe.map HandleKnightInput
+        Input.Wait ->
+            Just (HandleKnightInput Action.Wait)
 
-                    _ ->
-                        Nothing
-            )
+        Input.Thrust ->
+            Just (HandleKnightInput Action.Thrust)
 
 
 subscriptions : EngineArgs -> Model -> Sub Msg
