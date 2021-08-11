@@ -82,10 +82,16 @@ type alias Game =
     }
 
 
-type Model
+type GameStatus
     = GameInProgress Game
     | GameWon Game
     | GameLost Game
+
+
+type alias Model =
+    { keysDown : List Input
+    , game : GameStatus
+    }
 
 
 init : EngineArgs -> () -> ( Model, Cmd Msg )
@@ -108,15 +114,19 @@ init engineArgs _ =
         initialActions : ActionList
         initialActions =
             SelectionList.create 5
+
+        initialGameStatus : GameStatus
+        initialGameStatus =
+            GameInProgress
+                { nonce = 0
+                , seed = Random.initialSeed 0
+                , party = initialParty
+                , enemy = initialEnemy
+                , actions = initialActions
+                , health = Meter.create 100
+                }
     in
-    ( GameInProgress
-        { nonce = 0
-        , seed = Random.initialSeed 0
-        , party = initialParty
-        , enemy = initialEnemy
-        , actions = initialActions
-        , health = Meter.create 100
-        }
+    ( { keysDown = [], game = initialGameStatus }
     , Cmd.none
     )
 
@@ -130,6 +140,7 @@ port emitSound : String -> Cmd msg
 
 type Msg
     = NoOp
+    | HandleKeyDown String
     | SelectAction Int
     | DeselectAction
     | Input Input
@@ -259,20 +270,31 @@ applyOnSuccess action game =
 
 update : EngineArgs -> Msg -> Model -> ( Model, Cmd Msg )
 update engineArgs msg model =
-    case model of
-        GameInProgress game ->
-            case updateGame engineArgs msg game of
-                ContinueGame ( newGame, commands ) ->
-                    ( GameInProgress newGame, commands )
+    case msg of
+        NoOp ->
+            ( model, Cmd.none )
 
-                PlayerWon ( newGame, commands ) ->
-                    ( GameWon newGame, commands )
-
-                PlayerLost ( newGame, commands ) ->
-                    ( GameLost newGame, commands )
+        HandleKeyDown keyCode ->
+            keyCode
+                |> Input.matchStringToInput
+                |> Maybe.map (\input -> ( { model | keysDown = input :: model.keysDown }, Cmd.none ))
+                |> Maybe.withDefault ( model, Cmd.none )
 
         _ ->
-            ( model, Cmd.none )
+            case model.game of
+                GameInProgress game ->
+                    case updateGame engineArgs msg game of
+                        ContinueGame ( newGame, commands ) ->
+                            ( { model | game = GameInProgress newGame }, commands )
+
+                        PlayerWon ( newGame, commands ) ->
+                            ( { model | game = GameWon newGame }, commands )
+
+                        PlayerLost ( newGame, commands ) ->
+                            ( { model | game = GameLost newGame }, commands )
+
+                _ ->
+                    ( model, Cmd.none )
 
 
 type GameUpdate
@@ -324,6 +346,10 @@ updateGame engineArgs msg game =
     in
     case msg of
         NoOp ->
+            -- TODO : refactor update function so dont have to have this here
+            noOp
+
+        HandleKeyDown _ ->
             noOp
 
         DeselectAction ->
@@ -513,14 +539,19 @@ updateGame engineArgs msg game =
 -- SUBSCRIPTIONS
 
 
-keyDecoder : EngineArgs -> Model -> Decode.Decoder Msg
-keyDecoder engineArgs model =
-    case model of
+keyUpDecoder : EngineArgs -> Model -> Decode.Decoder Msg
+keyUpDecoder engineArgs model =
+    case model.game of
         GameInProgress game ->
             Decode.map (toUserInput engineArgs game) (Decode.field "key" Decode.string)
 
         _ ->
             Decode.succeed NoOp
+
+
+keyDownDecoder : EngineArgs -> Model -> Decode.Decoder Msg
+keyDownDecoder engineArgs model =
+    Decode.map HandleKeyDown (Decode.field "key" Decode.string)
 
 
 tryAll : List (Maybe t) -> Maybe t
@@ -588,10 +619,11 @@ matchInputToMsg input =
 
 subscriptions : EngineArgs -> Model -> Sub Msg
 subscriptions engineArgs model =
-    case model of
+    case model.game of
         GameInProgress _ ->
             Sub.batch
-                [ Browser.Events.onKeyUp (keyDecoder engineArgs model)
+                [ Browser.Events.onKeyUp (keyUpDecoder engineArgs model)
+                , Browser.Events.onKeyDown (keyUpDecoder engineArgs model)
                 , Browser.Events.onAnimationFrameDelta HandleAnimationFrame
                 ]
 
@@ -877,7 +909,7 @@ view engineArgs model =
                     ]
                 ]
     in
-    case model of
+    case model.game of
         GameInProgress game ->
             renderGame game
 
