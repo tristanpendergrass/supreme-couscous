@@ -16,6 +16,7 @@ import Meter exposing (Meter)
 import Party exposing (Party)
 import Random
 import SelectionList exposing (SelectionList)
+import Task
 import Utils
 
 
@@ -141,6 +142,7 @@ port emitSound : String -> Cmd msg
 type Msg
     = NoOp
     | HandleKeyDown String
+    | HandleKeyUp String
     | SelectAction Int
     | DeselectAction
     | Input Input
@@ -270,6 +272,10 @@ applyOnSuccess action game =
 
 update : EngineArgs -> Msg -> Model -> ( Model, Cmd Msg )
 update engineArgs msg model =
+    let
+        noOp =
+            ( model, Cmd.none )
+    in
     case msg of
         NoOp ->
             ( model, Cmd.none )
@@ -278,8 +284,38 @@ update engineArgs msg model =
             keyCode
                 |> Input.matchStringToInput
                 |> Maybe.map (\input -> ( { model | keysDown = input :: model.keysDown }, Cmd.none ))
-                |> Maybe.withDefault ( model, Cmd.none )
+                |> Maybe.withDefault noOp
 
+        HandleKeyUp keyCode ->
+            case Input.matchStringToInput (Debug.log "up:" keyCode) of
+                Just input ->
+                    let
+                        maybeNextMsg =
+                            matchInputToMsg input
+                    in
+                    case maybeNextMsg of
+                        Just nextMsg ->
+                            -- TODO: model returned should have the inputs removed from keysDown
+                            ( model, Task.perform (\() -> nextMsg) (Task.succeed ()) )
+
+                        Nothing ->
+                            noOp
+
+                Nothing ->
+                    noOp
+
+        -- keyCode
+        --     |> Input.matchStringToInput
+        --     |> Maybe.map (\input ->
+        --         input
+        --             |> matchInputToMsg
+        --             |>
+        --         let
+        --             nextMsg = matchInputToMsg input
+        --         in
+        --         n
+        --         noOp)
+        --     |> Maybe.withDefault noOp
         _ ->
             case model.game of
                 GameInProgress game ->
@@ -350,6 +386,9 @@ updateGame engineArgs msg game =
             noOp
 
         HandleKeyDown _ ->
+            noOp
+
+        HandleKeyUp _ ->
             noOp
 
         DeselectAction ->
@@ -543,7 +582,7 @@ keyUpDecoder : EngineArgs -> Model -> Decode.Decoder Msg
 keyUpDecoder engineArgs model =
     case model.game of
         GameInProgress game ->
-            Decode.map (toUserInput engineArgs game) (Decode.field "key" Decode.string)
+            Decode.map HandleKeyUp (Decode.field "key" Decode.string)
 
         _ ->
             Decode.succeed NoOp
@@ -623,7 +662,7 @@ subscriptions engineArgs model =
         GameInProgress _ ->
             Sub.batch
                 [ Browser.Events.onKeyUp (keyUpDecoder engineArgs model)
-                , Browser.Events.onKeyDown (keyUpDecoder engineArgs model)
+                , Browser.Events.onKeyDown (keyDownDecoder engineArgs model)
                 , Browser.Events.onAnimationFrameDelta HandleAnimationFrame
                 ]
 
