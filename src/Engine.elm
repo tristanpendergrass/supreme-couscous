@@ -270,6 +270,15 @@ applyOnSuccess action game =
     List.foldl applyEffect game effects
 
 
+removeInput : Input -> Model -> Model
+removeInput input model =
+    let
+        newKeysDown =
+            List.filter ((/=) input) model.keysDown
+    in
+    { model | keysDown = newKeysDown }
+
+
 update : EngineArgs -> Msg -> Model -> ( Model, Cmd Msg )
 update engineArgs msg model =
     let
@@ -287,6 +296,7 @@ update engineArgs msg model =
                 |> Maybe.withDefault noOp
 
         HandleKeyUp keyCode ->
+            -- TODO: refactor these maybe chains
             case Input.matchStringToInput (Debug.log "up:" keyCode) of
                 Just input ->
                     let
@@ -295,8 +305,7 @@ update engineArgs msg model =
                     in
                     case maybeNextMsg of
                         Just nextMsg ->
-                            -- TODO: model returned should have the inputs removed from keysDown
-                            ( model, Task.perform (\() -> nextMsg) (Task.succeed ()) )
+                            ( removeInput input model, Task.perform (\() -> nextMsg) (Task.succeed ()) )
 
                         Nothing ->
                             noOp
