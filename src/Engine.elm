@@ -296,8 +296,7 @@ update engineArgs msg model =
                 |> Maybe.withDefault noOp
 
         HandleKeyUp keyCode ->
-            -- TODO: refactor these maybe chains
-            case Input.matchStringToInput (Debug.log "up:" keyCode) of
+            case Input.matchStringToInput keyCode of
                 Just input ->
                     let
                         maybeNextMsg =
@@ -313,18 +312,6 @@ update engineArgs msg model =
                 Nothing ->
                     noOp
 
-        -- keyCode
-        --     |> Input.matchStringToInput
-        --     |> Maybe.map (\input ->
-        --         input
-        --             |> matchInputToMsg
-        --             |>
-        --         let
-        --             nextMsg = matchInputToMsg input
-        --         in
-        --         n
-        --         noOp)
-        --     |> Maybe.withDefault noOp
         _ ->
             case model.game of
                 GameInProgress game ->
@@ -863,12 +850,6 @@ renderBottom game =
 
                     _ ->
                         div [] []
-             -- ThiefSelection ->
-             --     div [ class "text-gray-100" ] [ text "Thief Selection" ]
-             -- PriestSelection ->
-             --     div [ class "text-gray-100" ] [ text "Priest Selection" ]
-             -- EnemySelection ->
-             --     div [ class "text-gray-100" ] [ text "Enemy Selection" ]
             )
         |> Maybe.withDefault (div [ class "text-gray-100" ] [ text "Nothing Selected" ])
 
