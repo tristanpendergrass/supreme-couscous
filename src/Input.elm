@@ -65,4 +65,36 @@ type alias InputStats =
 
 getStats : Input -> InputStats
 getStats input =
-    Debug.todo "Implement getStats"
+    case input of
+        SelectOne ->
+            { shortcutLabel = "1", label = "1" }
+
+        SelectTwo ->
+            { shortcutLabel = "2", label = "2" }
+
+        SelectThree ->
+            { shortcutLabel = "3", label = "3" }
+
+        SelectFour ->
+            { shortcutLabel = "4", label = "4" }
+
+        SelectFive ->
+            { shortcutLabel = "5", label = "5" }
+
+        Slash ->
+            { shortcutLabel = "s", label = "Slash" }
+
+        Kick ->
+            { shortcutLabel = "k", label = "Kick" }
+
+        Wait ->
+            { shortcutLabel = "w", label = "Wait" }
+
+        Thrust ->
+            { shortcutLabel = "t", label = "Thrust" }
+
+        Cancel ->
+            { shortcutLabel = "q", label = "Cancel" }
+
+        Finish ->
+            { shortcutLabel = "Enter", label = "Finish" }

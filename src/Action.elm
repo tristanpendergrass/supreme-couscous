@@ -198,4 +198,15 @@ handleKnightMove =
 
 getInputForKnightMove : KnightMove -> Input
 getInputForKnightMove knightMove =
-    Debug.todo "Implement"
+    case knightMove of
+        Slash ->
+            Input.Slash
+
+        Kick ->
+            Input.Kick
+
+        Wait ->
+            Input.Wait
+
+        Thrust ->
+            Input.Thrust
