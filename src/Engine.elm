@@ -146,7 +146,7 @@ type Msg
     | SelectAction Int
     | DeselectAction
     | Input Input
-    | HandleKnightInput Action.KnightInput
+    | HandleKnightInput Action.KnightMove
     | Finish
     | HandleAnimationFrame Float
 
@@ -345,7 +345,7 @@ isGameWon game =
     Meter.getCurrent game.enemy.health == 0
 
 
-mapKnightModel : (List Action.KnightInput -> List Action.KnightInput) -> Game -> Game
+mapKnightModel : (List Action.KnightMove -> List Action.KnightMove) -> Game -> Game
 mapKnightModel fn game =
     let
         newActions : ActionList
@@ -446,7 +446,7 @@ updateGame engineArgs msg game =
                 newGame : Game
                 newGame =
                     game
-                        |> mapKnightModel (Action.handleKnightInput input)
+                        |> mapKnightModel (Action.handleKnightMove input)
             in
             ContinueGame ( newGame, Cmd.none )
 
@@ -830,14 +830,14 @@ renderTop game =
         ]
 
 
-renderBottom : Game -> Html Msg
-renderBottom game =
+renderBottom : List Input -> Game -> Html Msg
+renderBottom inputs game =
     SelectionList.getSelected game.actions
         |> Maybe.map
             (\( action, actionModel ) ->
                 case ( Action.getActionType action, actionModel ) of
-                    ( Action.KnightAttack, Action.KnightModel inputs ) ->
-                        renderKnightBottom action inputs
+                    ( Action.KnightAttack, Action.KnightModel moves ) ->
+                        renderKnightBottom moves action inputs
 
                     ( Action.ThiefAttack, Action.ThiefModel ) ->
                         div [] []
@@ -854,8 +854,8 @@ renderBottom game =
         |> Maybe.withDefault (div [ class "text-gray-100" ] [ text "Nothing Selected" ])
 
 
-renderKnightBottom : Action -> List Action.KnightInput -> Html Msg
-renderKnightBottom action knightModel =
+renderKnightBottom : List Action.KnightMove -> Action -> List Input -> Html Msg
+renderKnightBottom knightModel action keysDown =
     let
         stats =
             Action.getStats action
@@ -872,17 +872,20 @@ renderKnightBottom action knightModel =
                 [ div [ class "italic" ] [ text "For this opponent...something special. A kick, a slash, then wait, then thrust!" ]
                 ]
 
-        renderInput : Bool -> Action.KnightInput -> Html Msg
-        renderInput isPressed input =
+        renderMove : Bool -> Action.KnightMove -> Html Msg
+        renderMove isPressed move =
             let
-                { keyCode, label } =
-                    Action.knightInputStats input
+                { input } =
+                    Action.knightMoveStats move
+
+                { shortcutLabel, label } =
+                    Input.getStats input
             in
             button
                 [ class inputContainer
-                , onClick (HandleKnightInput input)
+                , onClick (HandleKnightInput move)
                 ]
-                [ div [ class inputTrigger ] [ text <| String.fromChar keyCode ]
+                [ div [ class inputTrigger ] [ text shortcutLabel ]
                 , div
                     [ class <|
                         if isPressed then
@@ -898,35 +901,44 @@ renderKnightBottom action knightModel =
         renderFinishButton =
             div [ onClick Finish ] [ text "Finish" ]
 
-        renderMoves : Html Msg
-        renderMoves =
+        renderDoneMoves : Html Msg
+        renderDoneMoves =
             div [ class "w-96 h-20 flex items-center space-x-1" ]
                 (List.concat
                     [ [ Action.Slash, Action.Kick, Action.Wait, Action.Thrust ]
-                        |> List.map (renderInput True)
+                        |> List.map (renderMove True)
                     , [ renderFinishButton ]
                     ]
                 )
 
-        renderInputs : Html Msg
-        renderInputs =
+        isMovePressed : Action.KnightMove -> Bool
+        isMovePressed move =
+            let
+                input : Input
+                input =
+                    Action.getInputForKnightMove move
+            in
+            List.member input keysDown
+
+        renderMoves : Html Msg
+        renderMoves =
             div [ class "flex space-x-2" ]
                 (knightModel
-                    |> List.map (renderInput True)
+                    |> List.map (\input -> renderMove (isMovePressed input) input)
                 )
     in
     div [ class "w-full h-full border-gray-500 border-4 bg-gray-400 flex items-center p-2 space-x-2" ]
         [ renderPortrait
         , div [ class "flex-grow flex flex-col space-y-2 items-stretch justify-start h-full" ]
-            [ renderPrompt, renderMoves, renderInputs ]
+            [ renderPrompt, renderMoves, renderDoneMoves ]
         ]
 
 
 view : EngineArgs -> Model -> Html Msg
 view engineArgs model =
     let
-        renderGame : Game -> Html Msg
-        renderGame game =
+        renderGame : Game -> List Input -> Html Msg
+        renderGame game keysDown =
             div [ class "bg-gray-900 w-screen h-screen flex items-center justify-center" ]
                 [ div
                     [ class "rounded border-gray-100 border-4"
@@ -934,13 +946,13 @@ view engineArgs model =
                     , style "height" "42rem" -- i.e. h-168
                     ]
                     [ div [ class "w-full h-2/3" ] [ renderTop game ]
-                    , div [ class "w-full h-1/3" ] [ renderBottom game ]
+                    , div [ class "w-full h-1/3" ] [ renderBottom keysDown game ]
                     ]
                 ]
     in
     case model.game of
         GameInProgress game ->
-            renderGame game
+            renderGame game model.keysDown
 
         GameLost game ->
             div []
@@ -948,7 +960,7 @@ view engineArgs model =
                     [ div [ class "absolute w-full flex justify-center top-20" ]
                         [ div [ class "p-12 text-2xl font-bold border-4 border-gray-900 bg-gray-500 text-gray-100" ] [ text "Game Lost" ] ]
                     ]
-                , renderGame game
+                , renderGame game model.keysDown
                 ]
 
         GameWon game ->
@@ -957,5 +969,5 @@ view engineArgs model =
                     [ div [ class "absolute w-full flex justify-center top-20" ]
                         [ div [ class "p-12 text-2xl font-bold border-4 border-gray-900 bg-green-500 text-gray-900" ] [ text "Game Won" ] ]
                     ]
-                , renderGame game
+                , renderGame game model.keysDown
                 ]

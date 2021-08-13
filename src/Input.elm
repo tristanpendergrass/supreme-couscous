@@ -1,4 +1,4 @@
-module Input exposing (Input(..), matchStringToInput)
+module Input exposing (Input(..), getStats, matchStringToInput)
 
 
 type Input
@@ -57,3 +57,12 @@ matchStringToInput string =
 
         _ ->
             Nothing
+
+
+type alias InputStats =
+    { shortcutLabel : String, label : String }
+
+
+getStats : Input -> InputStats
+getStats input =
+    Debug.todo "Implement getStats"

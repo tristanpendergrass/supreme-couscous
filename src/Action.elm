@@ -3,20 +3,22 @@ module Action exposing
     , ActionModel(..)
     , ActionType(..)
     , Effect(..)
-    , KnightInput(..)
+    , KnightMove(..)
     , create
     , damage
     , getActionType
+    , getInputForKnightMove
     , getModel
     , getStats
     , getTimer
-    , handleKnightInput
+    , handleKnightMove
     , isExpired
-    , knightInputStats
+    , knightMoveStats
     , mapTimer
     )
 
 import ActionTimer exposing (ActionTimer)
+import Input exposing (Input)
 
 
 type alias CommonData =
@@ -38,7 +40,7 @@ type ActionType
 
 
 type ActionModel
-    = KnightModel (List KnightInput)
+    = KnightModel (List KnightMove)
     | ThiefModel
     | PriestModel
     | EnemyModel
@@ -166,29 +168,34 @@ knightAttackStats =
     }
 
 
-type KnightInput
+type KnightMove
     = Slash
     | Kick
     | Wait
     | Thrust
 
 
-knightInputStats : KnightInput -> { keyCode : Char, label : String }
-knightInputStats knightInput =
+knightMoveStats : KnightMove -> { input : Input }
+knightMoveStats knightInput =
     case knightInput of
         Slash ->
-            { keyCode = 'S', label = "Slash" }
+            { input = Input.Slash }
 
         Kick ->
-            { keyCode = 'K', label = "Kick" }
+            { input = Input.Kick }
 
         Wait ->
-            { keyCode = 'W', label = "Wait" }
+            { input = Input.Wait }
 
         Thrust ->
-            { keyCode = 'T', label = "Thrust" }
+            { input = Input.Thrust }
 
 
-handleKnightInput : KnightInput -> List KnightInput -> List KnightInput
-handleKnightInput =
+handleKnightMove : KnightMove -> List KnightMove -> List KnightMove
+handleKnightMove =
     (::)
+
+
+getInputForKnightMove : KnightMove -> Input
+getInputForKnightMove knightMove =
+    Debug.todo "Implement"
